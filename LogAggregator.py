@@ -1,6 +1,6 @@
 from flask import Flask, request
 from src.Logger.Logger import Logger
-
+from json import JSONDecodeError
 
 
 class LogAggregator:
@@ -18,13 +18,16 @@ class LogAggregator:
         return "<h1> LogAggregator is online </h1>"
     
     def log(self):
-        """Method to log messages from different sources. It needs to process both the IP and the body of the services that are sending logs
-
+        """Method to log messages from different sources. The full structure of the logging messages is defined in class Logger.py
+            this method logs the message using the Logger definition, returning to the client the origin IP of the logged message.s
         Returns:
             None
         """        
-        self.__log.log(request, request.json)
-        return "Log received from {}".format(request), 200  # OK
+        try:
+            self.__log.log(request, request.data)
+            return "Log received from {}".format(request.remote_addr), 200  # OK
+        except JSONDecodeError as e:
+            return "Invalid JSON: {}".format(e.msg), 400
         
 if __name__ == "__main__":
     log_aggregator = LogAggregator()

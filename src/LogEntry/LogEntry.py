@@ -1,17 +1,18 @@
 from pydantic import BaseModel, field_validator
 from typing_extensions import Annotated
+from typing import Optional
+
 
 class LogEntry(BaseModel):
     application_server_ip : Annotated[str, 'check_application_server_ip'] #IP of the server where the logged service is running
-    application_id: str #ID of the application that is logging the message
-    timestamp: Annotated[int, 'timestamp_not_empty'] #timestamp of the log occurence
+    application_id: int #ID of the application that is logging the message
+    timestamp: Annotated[str, 'timestamp_not_empty'] #timestamp of the log occurence
     client_ip: Annotated[str, 'check_application_server_ip'] #client IP that requested the resource when the log entry was produced
     http_method: str #Method of the client IP call that requested the resource when the log entry was produced
     resource_requested: str #resource requested in the server that is creating the log entry
     protocol: str #protocol used in the request that generated the log entry
-    status_code: int #optional: if the log entry is created within a response process of the server, then it can log the status code the server is returning to the client
-    message: str #additional information being logged 
-    level: str  # 'INFO', 'WARNING', 'ERROR', 'CRITICAL' #level of criticality of the log entry
+    status_code: Optional[str] #optional: if the log entry is created within a response process of the server, then it can log the status code the server is returning to the client
+    message: str #additional information being logged     level: str  # 'INFO', 'WARNING', 'ERROR', 'CRITICAL' #level of criticality of the log entry
 
 
     def check_application_server_ip(self, value):
