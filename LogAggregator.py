@@ -6,7 +6,7 @@ from json import JSONDecodeError
 class LogAggregator:
     
     def __init__(self):
-        self.__log = Logger()
+        self.__log = Logger("C:\\Next level\\PSP - Yuri\\100 Days\\LogAggregator\\static\\")
         self.app = Flask(__name__)
         self.app.add_url_rule("/", "online", self.online)
         self.app.add_url_rule("/log", "log", self.log, methods=["POST"])
@@ -28,6 +28,8 @@ class LogAggregator:
             return "Log received from {}".format(request.remote_addr), 200  # OK
         except JSONDecodeError as e:
             return "Invalid JSON: {}".format(e.msg), 400
+        except FileNotFoundError and OSError as e:
+            return "Error writing log to file {}: ".format(e.filename, e.strerror), 500
         
 if __name__ == "__main__":
     log_aggregator = LogAggregator()
