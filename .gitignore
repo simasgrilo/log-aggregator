@@ -1,0 +1,9 @@
+notas.odt
+class_diagram.drawio
+.~lock.*
+*.pyc
+*.code-workspace
+*.vscode
+package*
+node_modules/
+__pycache__/
