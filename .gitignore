@@ -6,3 +6,4 @@ class_diagram.drawio
 *.vscode
 package*
 node_modules/
+__pycache__/
