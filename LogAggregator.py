@@ -1,12 +1,13 @@
 from flask import Flask, request
 from src.Logger.Logger import Logger
+from src.FileTransferManager.FileTransferManager import FileTransferManager
 from json import JSONDecodeError
 
 
 class LogAggregator:
     
     def __init__(self):
-        self.__log = Logger("C:\\Next level\\PSP - Yuri\\100 Days\\LogAggregator\\static\\")
+        self.__log = Logger("C:\\Next level\\PSP - Yuri\\100 Days\\LogAggregator\\static\\", FileTransferManager().get_instance())
         self.app = Flask(__name__)
         self.app.add_url_rule("/", "online", self.online)
         self.app.add_url_rule("/log", "log", self.log, methods=["POST"])
