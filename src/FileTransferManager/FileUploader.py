@@ -1,10 +1,9 @@
 import boto3
-from boto3.s3.transfer import TransferConfig
 from botocore.exceptions import NoCredentialsError
 
 
 
-class FileTransferManager:
+class FileUploader:
     """
     Class to manage file transfer between server and cloud storage using AWS S3. The objective is to store all collected logs in buckets in AWS so tehy will be acessed by ElasticSearch
     """    
@@ -13,7 +12,7 @@ class FileTransferManager:
     
     def __new__(cls):
         if not cls._instance:
-            cls._instance = super(FileTransferManager, cls).__new__(cls)
+            cls._instance = super(FileUploader, cls).__new__(cls)
         return cls._instance
     
     def __init__(self):

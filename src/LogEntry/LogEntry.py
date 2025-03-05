@@ -1,19 +1,37 @@
 from pydantic import BaseModel, field_validator
 from typing_extensions import Annotated
-from typing import Optional
+from enum import Enum
 
+class LogLevel(str, Enum):
+    INFO = 'INFO'
+    WARN = 'WARNING',
+    ERROR = 'ERROR',
+    CRITICAL = 'CRITICAL',
+    DEBUG = 'DEBUG'
 
 class LogEntry(BaseModel):
     application_server_ip : Annotated[str, 'check_application_server_ip'] #IP of the server where the logged service is running
     application_id: int #ID of the application that is logging the message
-    timestamp: Annotated[str, 'timestamp_not_empty'] #timestamp of the log occurence
+    date: Annotated[str, 'timestamp_not_empty'] #date of the log occurence
+    time: Annotated[str, 'timestamp_not_empty'] #time of the log occurence
     client_ip: Annotated[str, 'check_application_server_ip'] #client IP that requested the resource when the log entry was produced
-    http_method: str #Method of the client IP call that requested the resource when the log entry was produced
-    resource_requested: str #resource requested in the server that is creating the log entry
-    protocol: str #protocol used in the request that generated the log entry
-    status_code: Optional[str] #optional: if the log entry is created within a response process of the server, then it can log the status code the server is returning to the client
+    level: LogLevel #level of criticality of the log entry
+    method: str #method of component that was called when the message was logged
+    component: str #module/class that contains the method that was called when the message was logged
     message: str #additional information being logged     level: str  # 'INFO', 'WARNING', 'ERROR', 'CRITICAL' #level of criticality of the log entry
 
+    def to_json(self):
+        return {
+            "application_server_ip": self.application_server_ip,
+            "application_id": self.application_id,
+            "date": self.date,
+            "time": self.time,
+            "client_ip": self.client_ip,
+            "level": self.level,
+            "method": self.method,
+            "component": self.component,
+            "message": self.message
+        }
 
     def check_application_server_ip(self, value):
         #TODO add validator for IPv6 address
