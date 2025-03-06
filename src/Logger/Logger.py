@@ -1,15 +1,17 @@
 """Class to log messages from different sources into a cloud solution"""
 from src.LogEntry.LogEntry import LogEntry
 from src.FileTransferManager.FileUploader import FileUploader
+from src.ConfigManager.ConfigManager import ConfigManager
 import json
 from datetime import datetime, timezone
 
 
 class Logger:
     
-    def __init__(self, dir: str, file_transfer_manager: FileUploader):
+    def __init__(self, dir: str, file_transfer_manager: FileUploader, config: ConfigManager):
         self._dir = dir
         self._file_transfer_manager = file_transfer_manager
+        self._config = config
         self._logs = []
         #date will be logged in UTC for all logs to avoid timezone inconsistencies.
         self._start_date = datetime.now(timezone.utc)
@@ -31,14 +33,13 @@ class Logger:
             #different date as of previous logs: reset id and date
             self._start_date = date
             self._sequential_id = 1
-        file_name = "logaggergator_{}_{}.log".format(date, self._sequential_id)
+        file_name = "logaggregator_{}_{}.log".format(date, self._sequential_id)
         # try:
         with open(self._dir + file_name, "wt") as f:
             f.write(json.dumps(log_entry.to_json()))
             self._sequential_id += 1
         try:
-            #TODO parametrize bucket name in a config file
-            self._file_transfer_manager.transfer_file(self._dir + file_name, "simasgrilo-log-aggregator", file_name)
+            self._file_transfer_manager.transfer_file(self._dir + file_name, self._config.config["S3"]["bucketName"], file_name)
         except Exception as e:
             import traceback
             traceback.print_exc()       
