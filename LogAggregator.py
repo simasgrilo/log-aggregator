@@ -5,6 +5,7 @@ from src.ConfigManager.ConfigManager import ConfigManager
 from src.FileTransferManager.ElasticConnector import ElasticConnector
 from src.FileTransferManager.FileReader import FileReader
 from src.FileTransferManager.FileReaderControl import FileReaderControl
+from src.Utils.Constants import Constants
 from pydantic import ValidationError
 import json
 from json import JSONDecodeError
@@ -34,17 +35,17 @@ class LogAggregator:
         """        
         try: 
             self.__log.log(request, request.data)
-            return "Log received from {}".format(request.remote_addr), 200  # OK
+            return "Log received from {}".format(request.remote_addr), Constants.HTTP_OK.value  # O
         except JSONDecodeError as e:
-            return "Invalid JSON: {}".format(e.msg), 400
+            return "Invalid JSON: {}, document is {}".format(e.args, e.doc), Constants.HTTP_BAD_REQUEST.value
         except FileNotFoundError and OSError:
-            return "Error writing log to file {}: ".format(e.filename, e.strerror), 500
+            return "Error writing log to file {}: ".format(e.filename, e.strerror), Constants.HTTP_INTERNAL_SERVER_ERROR.value
         except ValidationError as e:
             error_msg = {
                 "Error" : "Invalid log entry",
                 "Details" : e.errors()
             }
-            return json.dumps(error_msg), 500
+            return json.dumps(error_msg), Constants.HTTP_BAD_REQUEST
         
 if __name__ == "__main__":
     log_aggregator = LogAggregator()
