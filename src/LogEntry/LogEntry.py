@@ -11,7 +11,7 @@ class LogLevel(str, Enum):
 
 class LogEntry(BaseModel):
     application_server_ip : Annotated[str, 'check_application_server_ip'] #IP of the server where the logged service is running
-    application_id: int #ID of the application that is logging the message
+    application_id: str #ID of the application that is logging the message
     date: Annotated[str, 'timestamp_not_empty'] #date of the log occurence
     time: Annotated[str, 'timestamp_not_empty'] #time of the log occurence
     client_ip: Annotated[str, 'check_application_server_ip'] #client IP that requested the resource when the log entry was produced

@@ -2,9 +2,10 @@
 from src.LogEntry.LogEntry import LogEntry
 from src.FileTransferManager.FileUploader import FileUploader
 from src.ConfigManager.ConfigManager import ConfigManager
+from pydantic import ValidationError
 import json
 from datetime import datetime, timezone
-
+from botocore import exceptions
 
 class Logger:
     
@@ -36,50 +37,66 @@ class Logger:
         file_name = "logaggregator_{}_{}.log".format(date, self._sequential_id)
         # try:
         with open(self._dir + file_name, "wt") as f:
-            f.write(json.dumps(log_entry.to_json()))
+            f.write(log_entry)
             self._sequential_id += 1
         try:
             self._file_transfer_manager.transfer_file(self._dir + file_name, self._config.config["S3"]["bucketName"], file_name)
+        except exceptions.ClientError as e:
+            pass
         except Exception as e:
             import traceback
             traceback.print_exc()       
             
     def log(self, header, payload: bytes):
-        #try:
-            # log_entry = {
-            #     "application_server_ip": header.remote_addr,
-            #     "application_id": payload["application_id"], 
-            #     "client_ip": payload["client_ip"],
-            #     "http_method": payload["http_method"] if payload["http_method"] else "",
-            #     "resource_requested": payload["resource_requested"] if payload["resource_requested"] else "",
-            #     "protocol": payload["protocol"] if payload["protocol"] else "",
-            #     "status_code": payload["status_code"] if payload["status_code"] else "",
-            #     "message": payload["status_code"] if payload["status_code"] else "",
-            #     "level": payload["level"] if payload["level"] else ""   
-            # }
-        payload = self.__parse(payload)
-        log_entry = LogEntry(\
-            application_server_ip=header.remote_addr, \
-            application_id=payload["application_id"], \
-            date=payload["date"], \
-            time=payload["time"], \
-            client_ip=payload["client_ip"], \
-            level= payload["level"] if "level" in payload else "", \
-            method= payload["http_method"] if "http_method" in payload else "", \
-            component= payload["component"] if "component" in payload else "", \
-            message= payload["message"] if "message" in payload else "" \
-        )
-        self.flush(log_entry)
+        payload = self.__parse(header, payload)
+        # log_entry = LogEntry(\
+        #     application_server_ip=header.remote_addr, \
+        #     application_id=payload["application_id"], \
+        #     date=payload["date"], \
+        #     time=payload["time"], \
+        #     client_ip=payload["client_ip"], \
+        #     level= payload["level"] if "level" in payload else "", \
+        #     method= payload["http_method"] if "http_method" in payload else "", \
+        #     component= payload["component"] if "component" in payload else "", \
+        #     message= payload["message"] if "message" in payload else "" \
+        # )
+        self.flush(payload)
 
-    def __parse(self, message: bytes):
+    def __parse(self, header, message: bytes):
         """
         Args:
             message (bytes): message to be parsed into a dictionary
         """
-        parsed_message = ""
-        for char in message:
-            parsed_message += chr(char)
-        return json.loads(parsed_message)
+        parsed_message = []
+        message = str(message, encoding='utf-8').split("\n")
+        try:
+            for log_row in message:
+                if not log_row:
+                    break
+                log_row = log_row.split("-")
+                year, month = log_row[0:2]
+                day, time = log_row[2].split(" ")[:-1]
+                date = "{}-{}-{}".format(year, month, day)
+                #remove any extra blank spaces that parts of the message can have:
+                log_row = [row.strip(" ") for row in log_row]
+                parsed_message.append(
+                    LogEntry(
+                        application_server_ip=header.remote_addr,
+                        application_id=log_row[4],
+                        date=date,
+                        time=time,
+                        client_ip=log_row[3],
+                        level=log_row[5],
+                        method=log_row[6],
+                        component=log_row[7],
+                        message=log_row[8]
+                    ).__str__()
+                )
+        except ValueError as e:
+            return "Error when parsing message {} : {}".format(log_row, e.msg)
+        except ValidationError as e:
+            return e.json()
+        return json.dumps(parsed_message)
     
     
     def get_logs(self):
