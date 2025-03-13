@@ -1,5 +1,6 @@
 import requests
 from src.FileTransferManager.Reader import Reader
+from src.ConfigManager.ConfigManager import ConfigManager
 from src.Formatter.NewlineDelimitedJSON import NewlineDelimitedJSON
 from typing import List
 
@@ -13,17 +14,26 @@ class ElasticConnector:
     Indexes are created per each file read from AWS. The index name is composed by the prefix "logaggregator-" followed by the date of the file creation.
     
     """
+    _instance = None
     
-    def __init__(self, elastic_config: dict):
+    def __new__(cls, config_manager: ConfigManager):
+        if cls._instance is None:
+            cls._instance = super(ElasticConnector, cls).__new__(cls)
+        return cls._instance
+    
+    def __init__(self, config_manager: ConfigManager):
         """
         Creates a new instance of a connector to the Elasticsearch instance.
         Variable elastic_config will hold the references read from the config file to connect to Elasticsearch
         Args:
             elastic_config (dict): Dictionary containing the configuration read from the config file to connect to Elasticsearch
         """
-        if not elastic_config:
+        if not config_manager:
             raise Exception("Elasticsearch config not provided. Please check your config.json file.")
-        self._config = elastic_config
+        self._config = config_manager.config["elastic"]
+        
+    def get_instance(cls):
+        return cls._instance
 
     def create_document(self, index_name:str, content: List[str]):
         """
@@ -42,16 +52,6 @@ class ElasticConnector:
         if req.status_code != 200:
             raise Exception("Error upon creating bulk request for index {}: message {}".format(index_name, req.json()))
         return req.json()
-
-    def create_index(self, index_name: str):
-        """
-        Creates an index in the Elasticsearch instance based on the amount of files that were created in this day.
-        """
-        index_url = "https://{}:{}/{}".format(self._config["host"], self._config["port"], index_name)
-        auth = (self._config["auth"]["username"], self._config["auth"]["password"])
-        req = requests.put(url=index_url, auth=auth, verify=False)
-        if req.status_code != 200:
-            raise Exception("Error upon requesting index {}: message {}".format(index_name, req.json()))
     
     def retrieve_index(self, index_name: str):
         """
@@ -71,3 +71,13 @@ class ElasticConnector:
             return req.json()
         if req.status_code % 100 == 4 or req.status_code % 100 == 5:    
             raise Exception("Error upon requesting index {}: message {}".format(index_name, req.json()["error"]))
+        
+    def create_index(self, index_name: str):
+        """
+        Creates an index in the Elasticsearch instance based on the amount of files that were created in this day.
+        """
+        index_url = "https://{}:{}/{}".format(self._config["host"], self._config["port"], index_name)
+        auth = (self._config["auth"]["username"], self._config["auth"]["password"])
+        req = requests.put(url=index_url, auth=auth, verify=False)
+        if req.status_code != 200:
+            raise Exception("Error upon requesting index {}: message {}".format(index_name, req.json()))

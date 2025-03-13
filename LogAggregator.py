@@ -15,7 +15,10 @@ class LogAggregator:
     
     def __init__(self):
         self.__config = ConfigManager("C:\\Next level\\PSP - Yuri\\100 Days\\LogAggregator\\config.json")
-        self.__log = Logger("C:\\Next level\\PSP - Yuri\\100 Days\\LogAggregator\\static\\", FileUploader().get_instance(), self.__config)
+        self.__log = Logger("C:\\Next level\\PSP - Yuri\\100 Days\\LogAggregator\\static\\", 
+                            FileUploader().get_instance(), 
+                            self.__config,
+                            ElasticConnector(self.__config).get_instance())
         self.app = Flask(__name__)
         self.app.add_url_rule("/", "online", self.online)
         self.app.add_url_rule("/log", "log", self.log, methods=["POST"])
@@ -30,7 +33,7 @@ class LogAggregator:
         """Method to log messages from different sources. The full structure of the logging messages is defined in class Logger.py
             this method logs the message using the Logger definition, returning to the client the origin IP of the logged messages.
             This endpoint will be used by the clients to send their logs to the aggregator. It will reunite these in files and then send it to Elasticsearch instance.
-        Returns:
+        Returns
             None
         """        
         try: 

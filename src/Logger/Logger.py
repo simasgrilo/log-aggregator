@@ -2,65 +2,44 @@
 from src.LogEntry.LogEntry import LogEntry
 from src.FileTransferManager.FileUploader import FileUploader
 from src.ConfigManager.ConfigManager import ConfigManager
+from src.FileTransferManager.ElasticConnector import ElasticConnector
 from pydantic import ValidationError
-import json
 from datetime import datetime, timezone
 from botocore import exceptions
+import json
+import os
+from pathlib import Path
 
 class Logger:
     
-    def __init__(self, dir: str, file_transfer_manager: FileUploader, config: ConfigManager):
+    def __init__(self, dir: str, file_transfer_manager: FileUploader, config: ConfigManager, elastic_connector: ElasticConnector):
         self._dir = dir
         self._file_transfer_manager = file_transfer_manager
+        self._elastic_connector = elastic_connector
         self._config = config
-        self._logs = []
         #date will be logged in UTC for all logs to avoid timezone inconsistencies.
         self._start_date = datetime.now(timezone.utc)
         #autoincrement ID to denote the i'th logfile of the day
         self._sequential_id = 1
-    
-    def flush(self, log_entry: LogEntry):
-        """
-        Flushes the file to a temporary log file with name considering the current timestamp and how many files were created with this timestamp
-
-        Args:
-            log_entry (LogEntry): _description_
-        """
-        log_creation_date = datetime.now(timezone.utc)
-        date = log_creation_date.strftime("%Y-%m-%d")
-        time = log_creation_date.strftime("%H:%M:%S")
-        file_name = None
-        if self._start_date.strftime("%Y-%m-%d") != date:
-            #different date as of previous logs: reset id and date
-            self._start_date = date
-            self._sequential_id = 1
-        file_name = "logaggregator_{}_{}.log".format(date, self._sequential_id)
-        # try:
-        with open(self._dir + file_name, "wt") as f:
-            f.write(log_entry)
-            self._sequential_id += 1
-        try:
-            self._file_transfer_manager.transfer_file(self._dir + file_name, self._config.config["S3"]["bucketName"], file_name)
-        except exceptions.ClientError as e:
-            pass
-        except Exception as e:
-            import traceback
-            traceback.print_exc()       
             
     def log(self, header, payload: bytes):
-        payload = self.__parse(header, payload)
-        # log_entry = LogEntry(\
-        #     application_server_ip=header.remote_addr, \
-        #     application_id=payload["application_id"], \
-        #     date=payload["date"], \
-        #     time=payload["time"], \
-        #     client_ip=payload["client_ip"], \
-        #     level= payload["level"] if "level" in payload else "", \
-        #     method= payload["http_method"] if "http_method" in payload else "", \
-        #     component= payload["component"] if "component" in payload else "", \
-        #     message= payload["message"] if "message" in payload else "" \
-        # )
-        self.flush(payload)
+        """
+        Method to generate the log file and send it to the corresponding S3 bucket. If successful, the file is deleted from the server.
+        Otherwise it is stored in a queue for processing later.
+        Args:
+            header (flask.Request): Flask header of the request that was received by LogAggregatror
+            payload (bytes): Payload of the logged file to be pushed to S3
+        """
+        parsed_payload = self.__parse(header, payload)
+        file_name = self.flush(parsed_payload)
+        self._delete_file(file_name)
+        self._elastic_connector.create_document(file_name, parsed_payload)
+        # except exceptions.ClientError as e:
+        #   pass
+        # except Exception as e:
+        #     import traceback
+        #     traceback.print_exc()
+        #     raise Exception(e.args)
 
     def __parse(self, header, message: bytes):
         """
@@ -90,14 +69,42 @@ class Logger:
                         method=log_row[6],
                         component=log_row[7],
                         message=log_row[8]
-                    ).__str__()
+                    ).model_dump_json() + '\n'
                 )
         except ValueError as e:
             return "Error when parsing message {} : {}".format(log_row, e.msg)
         except ValidationError as e:
             return e.json()
-        return json.dumps(parsed_message)
+        return parsed_message
+
+    def flush(self, log_entry: LogEntry):
+        """
+        Flushes the file to a temporary log file with name considering the current timestamp and how many files were created with this timestamp
+
+        Args:
+            log_entry (LogEntry): _description_
+        """
+        log_creation_date = datetime.now(timezone.utc)
+        date = log_creation_date.strftime("%Y-%m-%d")
+        time = log_creation_date.strftime("%H:%M:%S")
+        if self._start_date.strftime("%Y-%m-%d") != date:
+            #different date as of previous logs: reset id and date
+            self._start_date = date
+            self._sequential_id = 1
+        log_files_path = self._config.config["logs"]["path"]
+        file_name = "logaggregator_{}_{}.log".format(date, self._sequential_id)
+        while os.path.isfile(Path(__file__).parent.parent.parent.joinpath("{}{}".format(log_files_path,file_name))):
+            self._sequential_id += 1
+            file_name = "logaggregator_{}_{}.log".format(date, self._sequential_id)
+        # try:
+        with open(self._dir + file_name, "wt") as f:
+            f.writelines(log_entry)
+            self._sequential_id += 1
+        self._file_transfer_manager.transfer_file(self._dir + file_name, self._config.config["S3"]["bucketName"], file_name)
+        return file_name
     
-    
-    def get_logs(self):
-        return self._logs
+    def _delete_file(self, file_name: str):
+        try:
+            os.remove(file_name)
+        except FileNotFoundError as e:
+            return "File {} not found to be removed. Perhaps it was moved?".format(e.filename)
