@@ -26,13 +26,12 @@ class NewlineDelimitedJSON:
         """
         payload = []
         for log_entry in logs:
-            row = "{{\"index\": {{\"_index\": \"{}\"}}}}\n".format(index)
             try:
                 jsonified_log = json.loads(log_entry)
+                row = "{{\"index\": {{\"_index\": \"{}\"}}}}\n".format(index) + log_entry
+                payload.append(row)
             #TODO decide what to do if the log is not a valid JSON. Either continue with the processing or raise an exception
             except JSONDecodeError:
                 continue
                 #raise JSONDecodeError("Invalid JSON: {}".format(log_entry), log_entry)
-            row += log_entry + '\n'
-            payload.append(row)
         return "".join(payload)
