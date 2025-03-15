@@ -13,7 +13,7 @@ from json import JSONDecodeError
 class LogAggregator:
     
     def __init__(self):
-        self.__config = ConfigManager(".\\config.json") 
+        self.__config = ConfigManager("./config.json") 
         self.__log = Logger("./static", 
                             FileUploader().get_instance(), 
                             self.__config,
@@ -21,6 +21,9 @@ class LogAggregator:
         self.app = Flask(__name__)
         self.app.add_url_rule("/", "online", self.online)
         self.app.add_url_rule("/log", "log", self.log, methods=["POST"])
+
+    def app(self):
+        return self.app
 
     def run(self):
         self.app.run(port=8080)
@@ -49,6 +52,4 @@ class LogAggregator:
             }
             return json.dumps(error_msg), Constants.HTTP_BAD_REQUEST
         
-def create_app():
-    log_aggregator = LogAggregator()
-    return log_aggregator.run()
+app = LogAggregator().app
