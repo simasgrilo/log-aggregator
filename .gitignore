@@ -7,3 +7,4 @@ class_diagram.drawio
 package*
 node_modules/
 __pycache__/
+docs/*

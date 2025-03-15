@@ -10,12 +10,11 @@ from pydantic import ValidationError
 import json
 from json import JSONDecodeError
 
-
 class LogAggregator:
     
     def __init__(self):
-        self.__config = ConfigManager("C:\\Next level\\PSP - Yuri\\100 Days\\LogAggregator\\config.json")
-        self.__log = Logger("C:\\Next level\\PSP - Yuri\\100 Days\\LogAggregator\\static\\", 
+        self.__config = ConfigManager(".\\config.json") 
+        self.__log = Logger("./static", 
                             FileUploader().get_instance(), 
                             self.__config,
                             ElasticConnector(self.__config).get_instance())
@@ -50,6 +49,6 @@ class LogAggregator:
             }
             return json.dumps(error_msg), Constants.HTTP_BAD_REQUEST
         
-if __name__ == "__main__":
+def create_app():
     log_aggregator = LogAggregator()
-    log_aggregator.run()
+    return log_aggregator.run()
