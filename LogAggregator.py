@@ -9,18 +9,25 @@ from src.Utils.Constants import Constants
 from pydantic import ValidationError
 import json
 from json import JSONDecodeError
+import sys
 
 class LogAggregator:
     
     def __init__(self):
-        self.__config = ConfigManager("./config.json") 
-        self.__log = Logger("./static", 
-                            FileUploader().get_instance(), 
-                            self.__config,
-                            ElasticConnector(self.__config).get_instance())
-        self.app = Flask(__name__)
-        self.app.add_url_rule("/", "online", self.online)
-        self.app.add_url_rule("/log", "log", self.log, methods=["POST"])
+        try:
+            self.__config = ConfigManager("./config.json") 
+            self.__log = Logger("./static", 
+                                FileUploader().get_instance(), 
+                                self.__config,
+                                ElasticConnector(self.__config).get_instance())
+            self.app = Flask(__name__)
+            self.app.add_url_rule("/", "online", self.online)
+            self.app.add_url_rule("/log", "log", self.log, methods=["POST"])
+        except FileNotFoundError as e:
+            sys.stderr.write("Missing config.json file. Please provide a valid file when starting the app. \
+                     If this app was started using Docker, please ensure that your Docker run has a -v volume binding that maps the config.json file \
+                     to ./config.json")
+            raise FileNotFoundError("Shutting down. No config.json found")
 
     def app(self):
         return self.app
@@ -43,8 +50,10 @@ class LogAggregator:
             return "Log received from {}".format(request.remote_addr), Constants.HTTP_OK.value  # O
         except JSONDecodeError as e:
             return "Invalid JSON: {}, document is {}".format(e.args, e.doc), Constants.HTTP_BAD_REQUEST.value
-        except FileNotFoundError and OSError:
-            return "Error writing log to file {}: ".format(e.filename, e.strerror), Constants.HTTP_INTERNAL_SERVER_ERROR.value
+        except ValueError and IndexError as e:
+            return "Error upon parsing input payload. Please refer to the documentation to get the correct expected format".format(e.args), Constants.HTTP_BAD_REQUEST.value
+        except FileNotFoundError and OSError as e:
+            return "Error writing log to file {}: {}. This is probably due to the Elasticsearch instance being offline. Please contact the system's administrator.".format(e.filename, e.strerror), Constants.HTTP_INTERNAL_SERVER_ERROR.value
         except ValidationError as e:
             error_msg = {
                 "Error" : "Invalid log entry",
@@ -53,3 +62,4 @@ class LogAggregator:
             return json.dumps(error_msg), Constants.HTTP_BAD_REQUEST
         
 app = LogAggregator().app
+app.run()

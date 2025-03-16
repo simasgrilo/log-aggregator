@@ -3,7 +3,6 @@ from src.LogEntry.LogEntry import LogEntry
 from src.FileTransferManager.FileUploader import FileUploader
 from src.ConfigManager.ConfigManager import ConfigManager
 from src.FileTransferManager.ElasticConnector import ElasticConnector
-from pydantic import ValidationError
 from datetime import datetime, timezone
 from botocore import exceptions
 import json
@@ -72,9 +71,10 @@ class Logger:
                     ).model_dump_json() + '\n'
                 )
         except ValueError as e:
-            return "Error when parsing message {} : {}".format(log_row, e.msg)
-        except ValidationError as e:
-            return e.json()
+            raise ValueError("Error when parsing message {} : {}".format(log_row, e))
+        # except ValidationError as e:
+        #     e.add_note(e.json)
+        #     raise ValidationError.add_note(e.json())
         return parsed_message
 
     def flush(self, log_entry: LogEntry):

@@ -8,3 +8,4 @@ package*
 node_modules/
 __pycache__/
 docs/*
+config.json
