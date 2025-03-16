@@ -10,6 +10,7 @@ from pydantic import ValidationError
 import json
 from json import JSONDecodeError
 import sys
+import inspect
 
 class LogAggregator:
     
@@ -23,11 +24,13 @@ class LogAggregator:
             self.app = Flask(__name__)
             self.app.add_url_rule("/", "online", self.online)
             self.app.add_url_rule("/log", "log", self.log, methods=["POST"])
-        except FileNotFoundError as e:
-            sys.stderr.write("Missing config.json file. Please provide a valid file when starting the app. \
-                     If this app was started using Docker, please ensure that your Docker run has a -v volume binding that maps the config.json file \
-                     to ./config.json")
-            raise FileNotFoundError("Shutting down. No config.json found")
+        except FileNotFoundError:
+            message = inspect.cleandoc("""Missing config.json file. Please provide a valid file when starting the app. 
+                     If this app was started using Docker, please ensure that your Docker run has a -v volume binding that maps the config.json file 
+                     to ./config.json""")
+            sys.stderr.write(message)
+            sys.exit(1)
+            #raise FileNotFoundError("Shutting down. No config.json found")
 
     def app(self):
         return self.app
