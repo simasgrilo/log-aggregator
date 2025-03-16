@@ -29,8 +29,7 @@ class LogAggregator:
                      If this app was started using Docker, please ensure that your Docker run has a -v volume binding that maps the config.json file 
                      to ./config.json""")
             sys.stderr.write(message)
-            sys.exit(1)
-            #raise FileNotFoundError("Shutting down. No config.json found")
+            raise FileNotFoundError("Shutting down. No config.json found")
 
     def app(self):
         return self.app
@@ -65,4 +64,3 @@ class LogAggregator:
             return json.dumps(error_msg), Constants.HTTP_BAD_REQUEST
         
 app = LogAggregator().app
-app.run()
