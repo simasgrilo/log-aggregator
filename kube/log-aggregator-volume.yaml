@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: log-aggregator-config
+  labels:
+    app: aggregator
+data:
+  config.json : "insert your config.json content here"
+  
