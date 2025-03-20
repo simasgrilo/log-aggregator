@@ -21,7 +21,7 @@ spec:
         imagePullPolicy: IfNotPresent
         volumeMounts:
           - name:  config-volume
-            mountPath: '/app/'
+            mountPath: '/app/config.json'
             subPath: config.json
             readOnly: true
         ports:
