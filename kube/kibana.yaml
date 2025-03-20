@@ -6,4 +6,4 @@ spec:
   version: 8.17.2
   count: 1
   elasticsearchRef:
-    name: quickstart
+    name: es
