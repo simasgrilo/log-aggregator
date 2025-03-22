@@ -9,6 +9,11 @@ from src.Utils.Constants import Constants
 from pydantic import ValidationError
 import json
 from json import JSONDecodeError
+from src.database import DB as db
+from src.auth import auth_bp
+from pathlib import Path
+# from auth2 import auth_bp
+import os
 import sys
 import inspect
 
@@ -22,8 +27,16 @@ class LogAggregator:
                                 self.__config,
                                 ElasticConnector(self.__config).get_instance())
             self.app = Flask(__name__)
+            #self.app.config.from_prefixed_env()
+            #initialize the database:
+            db_dir = "sqlite:///{}".format(os.path.abspath(Path(__file__).parent) + "\\database\\log_aggregator.db")
+            self.app.config["SQLALCHEMY_DATABASE_URI"] =  db_dir #"sqlite:///mydb.db" 
+            db.initialize_db(self.app)
+            # register the public routes
             self.app.add_url_rule("/", "online", self.online)
             self.app.add_url_rule("/log", "log", self.log, methods=["POST"])
+            # register the blueprints for authentication: every authentication related resource needs to be prefixed with /auth
+            self.app.register_blueprint(auth_bp,url_prefix='/auth')
         except FileNotFoundError:
             message = inspect.cleandoc("""Missing config.json file. Please provide a valid file when starting the app. 
                      If this app was started using Docker, please ensure that your Docker run has a -v volume binding that maps the config.json file 
@@ -64,3 +77,4 @@ class LogAggregator:
             return json.dumps(error_msg), Constants.HTTP_BAD_REQUEST
         
 app = LogAggregator().app
+app.run()
