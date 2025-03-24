@@ -35,3 +35,19 @@ class User(db.Model):
     def delete(self):
         db.session.delete(self)
         db.session.commit()
+        
+    @staticmethod
+    def create_admin():
+        """
+        Creates an admin user. This is the user that can create users for other users in the system.
+        In other words. we need to have basic authentication for the register endpoint. The objective is to control who can register users.
+        In our application, we want the admin to distribute users for each of the apps, and not the app themselves generating users.
+        """
+        admin = User(
+            username="admin",
+            password="changeme"
+        )
+        created_admin = User.by_id("admin")
+        if created_admin:
+            return
+        admin.save()
