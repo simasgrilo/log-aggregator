@@ -7,7 +7,7 @@ db = DB.db_instance()
 
 class User(db.Model):
     __tablename__= 'users'
-    id = db.Column(db.String(), primary_key=True, default=str(uuid4()))
+    id = db.Column(db.String(), primary_key=True, default=lambda: str(uuid4()), unique=True)
     username = db.Column(db.String(),nullable=False)
     password = db.Column(db.Text(), nullable=False) #this CANNOT be commited like this. we need to store the cryptographed password value
     
@@ -22,6 +22,7 @@ class User(db.Model):
         self.password = generate_password_hash(password)
         
     def validate_password(self, password: str):
+        print("pass", self.password, password)
         return check_password_hash(self.password, password)
     
     @staticmethod
@@ -45,8 +46,8 @@ class User(db.Model):
         """
         admin = User(
             username="admin",
-            password="changeme"
         )
+        admin.set_password("changeme")
         created_admin = User.by_id("admin")
         if created_admin:
             return

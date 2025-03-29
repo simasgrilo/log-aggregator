@@ -12,9 +12,7 @@ from json import JSONDecodeError
 from src.database import DB as db
 from src.auth import auth_bp, LogJWTManager as jwt
 from pathlib import Path
-from flask_jwt_extended import jwt_required
-from flask_jwt_extended import exceptions
-# from auth2 import auth_bp
+from flask_jwt_extended import jwt_required, exceptions, get_jwt
 import os
 import sys
 import inspect
@@ -54,9 +52,6 @@ class LogAggregator:
             sys.stderr.write(message)
             raise FileNotFoundError("Shutting down. No config.json found")
 
-    # def app(self):
-    #     return self.app
-
     def run(self):
         self.app.run(port=8080)
     
@@ -65,7 +60,7 @@ class LogAggregator:
     
     #@app.post("/log")
     #this needs to be set BEFORE the register of the handler, of course
-    #TODO possible approach: encapsule the handler in a function so the decorator is seen in the register route call when initializign the app
+    #TODO possible approach: encapsule the handler in a function so the decorator is seen in the register route call when initializing the app
     def log_service(self):
         @jwt_required()
         def log(self):
@@ -75,9 +70,14 @@ class LogAggregator:
             Returns
                 None
             """        
-            try: 
+            try:
+                claims = get_jwt()
+                if "log" not in claims["perm"]:
+                    return json.dumps({
+                        "error": "missing authorization for requested resource"
+                    }), Constants.HTTP_UNAUTHORIZED.value
                 self.__log.log(request, request.data)
-                return "Log received from {}".format(request.remote_addr), Constants.HTTP_OK.valuea
+                return "Log received from {}".format(request.remote_addr), Constants.HTTP_OK.value
             except JSONDecodeError as e:
                 return "Invalid JSON: {}, document is {}".format(e.args, e.doc), Constants.HTTP_BAD_REQUEST.value
             except ValueError and IndexError as e:
@@ -89,10 +89,25 @@ class LogAggregator:
                     "Error" : "Invalid log entry",
                     "Details" : e.errors()
                 }
-                return json.dumps(error_msg), Constants.HTTP_BAD_REQUEST
+                return json.dumps(error_msg), Constants.HTTP_BAD_REQUEST.value
             except exceptions.NoAuthorizationError:
-                return "Invalid authorization header. Please check your request header Authorization record", Constants.HTTP_BAD_REQUEST.val
+                return "Invalid authorization header. Please check your request header Authorization record", Constants.HTTP_BAD_REQUEST.value
         return log(self)
     
+    def create_test_app(self):
+        """
+        Creates an subset of the Flask application that loads only the part of the app to be tested.
+        """
+        app = Flask(__name__)
+        app.config.update({
+            "TESTING" : True,
+            "SQLALCHEMY_DATABASE_URI" : "sqlite:///:memory:"
+        })
+        self.app.add_url_rule("/", "online", self.online)
+        self.app.add_url_rule("/log", "log", self.log_service, methods=["POST"])
+        app.register_blueprint(auth_bp,url_prefix='/auth')
+        db.initialize_db(app)
+        jwt.initialize_manager(app)
+        return app
+
 app = LogAggregator().app
-app.run()
