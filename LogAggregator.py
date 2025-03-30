@@ -35,9 +35,8 @@ class LogAggregator:
             db_dir = "sqlite:///{}".format(os.path.abspath(Path(__file__).parent) + "\\database\\log_aggregator.db")
             # XXX those three attributes below must be moved to a .env file to be read by your app and set the Flask object's config.
             # if read automatically from the .env file, they need to be prefixed with FLASK_.
-            self.app.config["SQLALCHEMY_DATABASE_URI"] =  db_dir #"sqlite:///mydb.db"
-            self.app.config["SECRET_KEY"] = "jQkaiekolfpqjmAFSFASF"
-            self.app.config["JWT_SECRET_KEY"] = "24b7f04e775d9725abb1b365"
+            self.app.config.from_prefixed_env()
+            self.app.config["SQLALCHEMY_DATABASE_URI"] =  db_dir
             db.initialize_db(self.app)
             jwt.initialize_manager(self.app)
             # register the public routes

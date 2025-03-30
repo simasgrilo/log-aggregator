@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.join(os.path.abspath(Path(__file__).parent.parent.par
 from LogAggregator import LogAggregator
 from src.Utils import Constants
 from src.models import User
+from src.database import DB as db
 from json import JSONEncoder
 
 class Test_TestJWTAuthHandlers(unittest.TestCase):
@@ -17,20 +18,24 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
         """
         Creates an subset of the Flask application that loads only the part of the app to be tested.
         """
-        app = LogAggregator().create_test_app()
-        app.json_encoder = JSONEncoder
-        app.config["JWT_SECRET_KEY"] = "iamnotasafekey"
-        self.app = app.test_client()
+        self.app = LogAggregator().create_test_app()
+        self.app.json_encoder = JSONEncoder
+        self.app.config["JWT_SECRET_KEY"] = "iamnotasafekey"
+        self.client_app = self.app.test_client()
         self._token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc0Mjc4NDQwNywianRpIjoiNDM0ZmY1ZDgtNTk3NS00YzkyLWEyMTctZjE3ZDExN2JjYTg4IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6ImFkbWluIiwibmJmIjoxNzQyNzg0NDA3LCJleHAiOjE3NDI3ODUzMDd9.gXuZp5PG-\_rtN8WKfghXmdh3MFqwbVPB8BY8Rj91ILE"
         self._invalid_token = "iaminvalidtoken"
         self._admin_credentials = {
             "username": "admin",
             "password": "changeme"
         }
-        with app.app_context():
+        with self.app.app_context():
             User.create_admin()
         self._COMMON_USERNAME = 'johndoe'
         self._COMMON_USERNAME_PASSWORD = 'mypass'
+
+    def tearDown(self):
+        db.end_db(self.app)   
+    
     def test_expired_token(self):
         auth_headers = {
             "Authorization" : "Bearer {}".format(self._token)
@@ -39,7 +44,7 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
             "username" : "lorem",
             "password" : "ipsum"
         }
-        resp = self.app.post("/auth/register", 
+        resp = self.client_app.post("/auth/register", 
                              headers=auth_headers, 
                              data=body
                             )
@@ -52,7 +57,7 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
         auth = {
             "Authorization" : "Basic {}".format(base64.b64encode(auth_pass.encode("utf-8")))
         }
-        response = self.app.get("/auth/login",
+        response = self.client_app.get("/auth/login",
                               headers=auth,
                              )
         self.assertEqual(response.status_code, Constants.HTTP_UNAUTHORIZED.value)
@@ -64,7 +69,7 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
         auth = {
             "Authorization" : "Basic {}".format(str(base64.b64encode(auth_pass.encode("utf-8")).decode("utf-8")))
         }
-        response = self.app.get("/auth/login",
+        response = self.client_app.get("/auth/login",
                               headers=auth,
                              ).get_json()
         token_auth = {
@@ -74,7 +79,7 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
             "username" : self._COMMON_USERNAME,
             "password" : self._COMMON_USERNAME_PASSWORD
         }
-        return self.app.post("/auth/register",
+        return self.client_app.post("/auth/register",
                              headers=token_auth,
                              json=body)
     
@@ -95,7 +100,7 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
         auth = {
             "Authorization" : "Basic {}".format(str(base64.b64encode(auth_pass.encode("utf-8")).decode("utf-8")))
         }
-        response = self.app.get("/auth/login",
+        response = self.client_app.get("/auth/login",
                               headers=auth,
                              ).get_json()
         token_auth = {
@@ -105,7 +110,7 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
             "username" : self._COMMON_USERNAME + 'other',
             "password" : self._COMMON_USERNAME_PASSWORD + 'other'
         }
-        response = self.app.post("/auth/register",
+        response = self.client_app.post("/auth/register",
                              headers=token_auth,
                              json=body)
         self.assertEqual(response.status_code, Constants.HTTP_UNAUTHORIZED.value)
