@@ -11,8 +11,7 @@ from pathlib import Path
 
 class Logger:
     
-    def __init__(self, dir: str, file_transfer_manager: FileUploader, config: ConfigManager, elastic_connector: ElasticConnector):
-        self._dir = dir
+    def __init__(self, file_transfer_manager: FileUploader, config: ConfigManager, elastic_connector: ElasticConnector):
         self._file_transfer_manager = file_transfer_manager
         self._elastic_connector = elastic_connector
         self._config = config
@@ -91,16 +90,16 @@ class Logger:
             #different date as of previous logs: reset id and date
             self._start_date = date
             self._sequential_id = 1
-        log_files_path = self._config.config["logs"]["path"]
         file_name = "logaggregator_{}_{}.log".format(date, self._sequential_id)
+        log_files_path = os.path.join(Path(__file__).parent.parent, self._config.config["logs"]["path"], file_name)
         while os.path.isfile(Path(__file__).parent.parent.parent.joinpath("{}{}".format(log_files_path,file_name))):
             self._sequential_id += 1
             file_name = "logaggregator_{}_{}.log".format(date, self._sequential_id)
         # try:
-        with open(self._dir + file_name, "wt") as f:
+        with open(log_files_path, "wt") as f:
             f.writelines(log_entry)
             self._sequential_id += 1
-        self._file_transfer_manager.transfer_file(self._dir + file_name, self._config.config["S3"]["bucketName"], file_name)
+        self._file_transfer_manager.transfer_file(log_files_path, self._config.config["S3"]["bucketName"], file_name)
         return file_name
     
     def _delete_file(self, file_name: str):
