@@ -22,7 +22,6 @@ class User(db.Model):
         self.password = generate_password_hash(password)
         
     def validate_password(self, password: str):
-        print("pass", self.password, password)
         return check_password_hash(self.password, password)
     
     @staticmethod
