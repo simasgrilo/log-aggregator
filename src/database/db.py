@@ -36,3 +36,9 @@ class DB:
         db.init_app(app)
         with app.app_context():
             db.create_all()
+            
+    @staticmethod
+    def end_db(app):
+        db = DB.db_instance()
+        with app.app_context():
+            db.session.remove()
