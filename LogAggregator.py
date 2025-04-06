@@ -25,8 +25,7 @@ class LogAggregator:
     def __init__(self):
         try:
             self.__config = ConfigManager("./config.json") 
-            self.__log = Logger("./static", 
-                                FileUploader().get_instance(), 
+            self.__log = Logger(FileUploader().get_instance(), 
                                 self.__config,
                                 ElasticConnector(self.__config).get_instance())
             self.app = Flask(__name__)
@@ -112,4 +111,3 @@ class LogAggregator:
         return app
 
 app = LogAggregator().app
-app.run()
