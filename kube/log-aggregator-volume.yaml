@@ -5,5 +5,29 @@ metadata:
   labels:
     app: aggregator
 data:
-  config.json : "insert your config.json content here"
-  
+  config.json : |
+    {
+      "logs" : {
+          "path" : "static"
+      },
+
+      "elastic": {
+          "host" : "es-es-http",
+          "port" : 9200,
+          "auth" : { 
+              "username": "elastic",
+              "password": "<elasticPassword>"
+          },
+          "endpoints" : {
+              "doc": "_doc",
+              "create": "_create",
+              "indexQuery" : "/_cat/indices/{}",
+              "bulk": "{}/_bulk"
+          }
+      },
+
+      "S3" : {
+          "bucketName" : "<bucketName",
+          "region" : "us-east-1"
+      }
+    }

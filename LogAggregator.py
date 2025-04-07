@@ -16,6 +16,7 @@ from flask_jwt_extended import jwt_required, exceptions, get_jwt
 import os
 import sys
 import inspect
+from dotenv import load_dotenv
 
 class LogAggregator:
     
@@ -24,17 +25,17 @@ class LogAggregator:
     def __init__(self):
         try:
             self.__config = ConfigManager("./config.json") 
-            self.__log = Logger("./static", 
-                                FileUploader().get_instance(), 
+            self.__log = Logger(FileUploader().get_instance(), 
                                 self.__config,
                                 ElasticConnector(self.__config).get_instance())
             self.app = Flask(__name__)
             self.app.json_encoder = json.JSONEncoder
             #self.app.config.from_prefixed_env()
             #initialize the database:
-            db_dir = "sqlite:///{}".format(os.path.abspath(Path(__file__).parent) + "\\database\\log_aggregator.db")
+            db_dir = os.path.join("sqlite:///{}".format(os.path.abspath(Path(__file__).parent)),"database","log_aggregator.db")
             # XXX those three attributes below must be moved to a .env file to be read by your app and set the Flask object's config.
             # if read automatically from the .env file, they need to be prefixed with FLASK_.
+            load_dotenv()
             self.app.config.from_prefixed_env()
             self.app.config["SQLALCHEMY_DATABASE_URI"] =  db_dir
             db.initialize_db(self.app)
