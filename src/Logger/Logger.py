@@ -95,6 +95,7 @@ class Logger:
         while os.path.isfile(Path(__file__).parent.parent.parent.joinpath("{}{}".format(log_files_path,file_name))):
             self._sequential_id += 1
             file_name = "logaggregator_{}_{}.log".format(date, self._sequential_id)
+            log_files_path = os.path.join(Path(__file__).parent.parent, self._config.config["logs"]["path"], file_name)
         # try:
         with open(log_files_path, "wt") as f:
             f.writelines(log_entry)
