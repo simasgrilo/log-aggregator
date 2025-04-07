@@ -18,14 +18,25 @@ spec:
       containers:
       - name: log-aggregator-container
         image: simasgrilo/log-aggregator:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         volumeMounts:
           - name:  config-volume
             mountPath: '/app/config.json'
             subPath: config.json
             readOnly: true
         ports:
-        - containerPort: 8081
+        - containerPort: 5000
+        env:
+          - name:  AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name:  aws-credentials
+                key:  aws_access_key_id
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name:  aws-credentials
+                key:  aws_secret_access_key
         resources:
           limits:
             memory: 512Mi
@@ -49,5 +60,6 @@ spec:
   type: NodePort
   ports:
   - protocol: TCP
-    port: 80
-    targetPort:  8081
+    port:  3001
+    targetPort:  5000
+    nodePort: 30001

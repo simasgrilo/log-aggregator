@@ -16,7 +16,7 @@ data:
           "port" : 9200,
           "auth" : { 
               "username": "elastic",
-              "password": "<your_password>"
+              "password": "<elasticPassword>"
           },
           "endpoints" : {
               "doc": "_doc",
@@ -27,8 +27,7 @@ data:
       },
 
       "S3" : {
-          "bucketName" : "simasgrilo-log-aggregator",
-          "accessKeyId" : "accessKeyId",
+          "bucketName" : "<bucketName",
           "region" : "us-east-1"
       }
     }
