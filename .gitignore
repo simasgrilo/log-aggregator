@@ -7,7 +7,8 @@ class_diagram.drawio
 package*
 node_modules/
 __pycache__/
-docs/*
+docs/*.odt
+docs/*.txt
 config.json
 .env
 *.db
