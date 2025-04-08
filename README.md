@@ -24,7 +24,7 @@ Amazon S3 for log storage
 
 The following diagram describes the current architecture of the solution, broken down in the key components used within the LogAggregator solution:
 
-![](.\docs\architecture.PNG)
+![](./docs/architecture.PNG)
 
 Mainly, the objective of LogAggregator is to consolidate, parse and send the logs for storage in S3 and for indexing in Elasticsearch. Lastly, Kibana is directly plugged into Elasticsearch which allows us to use all the tooling that Kibana provides for index patterns, analysis, alerts, etc, all based on the data that the LogAggregator pushes.
 
@@ -33,8 +33,7 @@ Mainly, the objective of LogAggregator is to consolidate, parse and send the log
 [Erick Grilo](https://simasgrilo.github.io)
 
 ## Features:
-- [X] Log collection from services that needs to log just need to send the service to the logging service (given that the service is authorized) in a standardized manner
-- Authentication and Authorization using JWT for logging measures
+- [X] Log collection from services that needs to log just need to send the service to the logging service (given that the service is authorized) in a standardized manner., including authentication and authorization using JWT for logging measures
 - [X] User creation and administration by admin
 - [ ] Serverless (deployed in cloud, both the service and the logs). Not yet in productive cloud but one can set in a EKS following the sequence of .yaml files
 - [X] Visualization of the logs using Kibana, including alert setup
