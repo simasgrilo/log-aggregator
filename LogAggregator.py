@@ -1,22 +1,24 @@
-from flask import Flask, request
-from src.Logger.Logger import Logger
-from src.FileTransferManager.FileUploader import FileUploader
-from src.ConfigManager.ConfigManager import ConfigManager
-from src.FileTransferManager.ElasticConnector import ElasticConnector
-from src.FileTransferManager.FileReader import FileReader
-from src.FileTransferManager.FileReaderControl import FileReaderControl
-from src.Utils.Constants import Constants
-from pydantic import ValidationError
-import json
-from json import JSONDecodeError
-from src.database import DB as db
-from src.auth import auth_bp, LogJWTManager as jwt
-from pathlib import Path
-from flask_jwt_extended import jwt_required, exceptions, get_jwt
+""" Main module of the LogAggregator solution, in which the Flask app is initialized, along with other required dependencies.
+    For more details, please refer to the documentation at https://www.github.com/simasgrilo/LogAggregator.
+"""
 import os
 import sys
 import inspect
+import json
+from pathlib import Path
+from json import JSONDecodeError
 from dotenv import load_dotenv
+from flask import Flask, request
+from pydantic import ValidationError
+from flask_jwt_extended import jwt_required, exceptions, get_jwt
+from src.Logger.Logger import Logger
+from src.database import DB as db
+from src.auth import auth_bp, LogJWTManager as jwt
+from src.FileTransferManager.FileUploader import FileUploader
+from src.ConfigManager.ConfigManager import ConfigManager
+from src.FileTransferManager.ElasticConnector import ElasticConnector
+from src.Utils.Constants import Constants
+
 
 class LogAggregator:
     
@@ -33,8 +35,6 @@ class LogAggregator:
             #self.app.config.from_prefixed_env()
             #initialize the database:
             db_dir = os.path.join("sqlite:///{}".format(os.path.abspath(Path(__file__).parent)),"database","log_aggregator.db")
-            # XXX those three attributes below must be moved to a .env file to be read by your app and set the Flask object's config.
-            # if read automatically from the .env file, they need to be prefixed with FLASK_.
             load_dotenv()
             self.app.config.from_prefixed_env()
             self.app.config["SQLALCHEMY_DATABASE_URI"] =  db_dir
@@ -45,13 +45,12 @@ class LogAggregator:
             self.app.add_url_rule("/log", "log", self.log_service, methods=["POST"])
             # register the blueprints for authentication: every authentication related resource needs to be prefixed with /auth
             self.app.register_blueprint(auth_bp,url_prefix='/auth')
-        except FileNotFoundError:
+        except FileNotFoundError as exc:
             message = inspect.cleandoc("""Missing config.json file. Please provide a valid file when starting the app. 
                      If this app was started using Docker, please ensure that your Docker run has a -v volume binding that maps the config.json file 
                      to ./config.json""")
             sys.stderr.write(message)
-            raise FileNotFoundError("Shutting down. No config.json found")
-
+            raise FileNotFoundError("Shutting down. No config.json found") from exc
     def run(self):
         self.app.run(port=8080)
     
@@ -77,13 +76,13 @@ class LogAggregator:
                         "error": "missing authorization for requested resource"
                     }), Constants.HTTP_UNAUTHORIZED.value
                 self.__log.log(request, request.data)
-                return "Log received from {}".format(request.remote_addr), Constants.HTTP_OK.value
+                return f"Log received from {request.remote_addr}", Constants.HTTP_OK.value
             except JSONDecodeError as e:
-                return "Invalid JSON: {}, document is {}".format(e.args, e.doc), Constants.HTTP_BAD_REQUEST.value
-            except ValueError and IndexError as e:
-                return "Error upon parsing input payload. Please refer to the documentation to get the correct expected format".format(e.args), Constants.HTTP_BAD_REQUEST.value
-            except FileNotFoundError and OSError as e:
-                return "Error writing log to file {}: {}. This is probably due to the Elasticsearch instance being offline. Please contact the system's administrator.".format(e.filename, e.strerror), Constants.HTTP_INTERNAL_SERVER_ERROR.value
+                return f"Invalid JSON: {e.args}, document is {e.doc}", Constants.HTTP_BAD_REQUEST.value
+            except (ValueError, IndexError) as e:
+                return f"Error upon parsing input payload. Please refer to the documentation to get the correct expected format: {e.args}", Constants.HTTP_BAD_REQUEST.value
+            except (FileNotFoundError, OSError) as e:
+                return f"Error writing log to file {e.filename}: {e.strerror}. This is probably due to the Elasticsearch instance being offline. Please contact the system's administrator.", Constants.HTTP_INTERNAL_SERVER_ERROR.value
             except ValidationError as e:
                 error_msg = {
                     "Error" : "Invalid log entry",
@@ -103,8 +102,8 @@ class LogAggregator:
             "TESTING" : True,
             "SQLALCHEMY_DATABASE_URI" : "sqlite:///:memory:"
         })
-        self.app.add_url_rule("/", "online", self.online)
-        self.app.add_url_rule("/log", "log", self.log_service, methods=["POST"])
+        app.add_url_rule("/", "online", self.online)
+        app.add_url_rule("/log", "log", self.log_service, methods=["POST"])
         app.register_blueprint(auth_bp,url_prefix='/auth')
         db.initialize_db(app)
         jwt.initialize_manager(app)

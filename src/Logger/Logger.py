@@ -1,16 +1,14 @@
 """Class to log messages from different sources into a cloud solution"""
+import json
+import os
+from pathlib import Path
+from datetime import datetime, timezone
 from src.LogEntry.LogEntry import LogEntry
 from src.FileTransferManager.FileUploader import FileUploader
 from src.ConfigManager.ConfigManager import ConfigManager
 from src.FileTransferManager.ElasticConnector import ElasticConnector
-from datetime import datetime, timezone
-from botocore import exceptions
-import json
-import os
-from pathlib import Path
 
-class Logger:
-    
+class Logger:   
     def __init__(self, file_transfer_manager: FileUploader, config: ConfigManager, elastic_connector: ElasticConnector):
         self._file_transfer_manager = file_transfer_manager
         self._elastic_connector = elastic_connector
@@ -28,10 +26,13 @@ class Logger:
             header (flask.Request): Flask header of the request that was received by LogAggregatror
             payload (bytes): Payload of the logged file to be pushed to S3
         """
-        parsed_payload = self.__parse(header, payload)
-        file_name = self.flush(parsed_payload)
-        self._delete_file(file_name)
-        self._elastic_connector.create_document(file_name, parsed_payload)
+        try:
+            parsed_payload = self.__parse(header, payload)
+            file_name = self.flush(parsed_payload)
+            self._delete_file(file_name)
+            self._elastic_connector.create_document(file_name, parsed_payload)
+        except ValueError as exc:
+            raise ValueError("Empty payload received") from exc
         # except exceptions.ClientError as e:
         #   pass
         # except Exception as e:
@@ -74,6 +75,8 @@ class Logger:
         # except ValidationError as e:
         #     e.add_note(e.json)
         #     raise ValidationError.add_note(e.json())
+        if not parsed_message:
+            raise ValueError("Empty payload received")
         return parsed_message
 
     def flush(self, log_entry: LogEntry):
@@ -97,14 +100,14 @@ class Logger:
             file_name = "logaggregator_{}_{}.log".format(date, self._sequential_id)
             log_files_path = os.path.join(Path(__file__).parent.parent, self._config.config["logs"]["path"], file_name)
         # try:
-        with open(log_files_path, "wt") as f:
+        with open(log_files_path, "wt", encoding='utf-8') as f:
             f.writelines(log_entry)
             self._sequential_id += 1
         self._file_transfer_manager.transfer_file(log_files_path, self._config.config["S3"]["bucketName"], file_name)
-        return file_name
-    
+        return file_name 
     def _delete_file(self, file_name: str):
         try:
             os.remove(file_name)
         except FileNotFoundError as e:
-            return "File {} not found to be removed. Perhaps it was moved?".format(e.filename)
+            return f"File {e.filename} not found to be removed. Perhaps it was moved?".format(e.filename)
+        return f"File {file_name} removed"
