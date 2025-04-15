@@ -1,11 +1,14 @@
+"""
+Test the JWT authentication handlers and whether the user creation endpoint is protected by JWT authentication.
+"""
 import unittest
+import shutil
 import os
 import sys
 import base64
 from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.abspath(Path(__file__).parent.parent.parent), "src"))
 sys.path.insert(0, os.path.join(os.path.abspath(Path(__file__).parent.parent.parent)))
-
 from LogAggregator import LogAggregator
 from src.Utils import Constants
 from src.models import User
@@ -14,6 +17,12 @@ from json import JSONEncoder
 
 class Test_TestJWTAuthHandlers(unittest.TestCase):
     
+    @classmethod
+    def setUpClass(cls):
+        cls.source_file = os.path.join(os.path.abspath(Path(__file__).parent.parent), "config.json")
+        cls.dest_file = os.path.join(os.path.abspath(Path(__file__).parent.parent.parent), "config.json")
+        shutil.copyfile(cls.source_file, cls.dest_file)
+        
     def setUp(self):
         """
         Creates an subset of the Flask application that loads only the part of the app to be tested.
@@ -32,13 +41,24 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
             User.create_admin()
         self._COMMON_USERNAME = 'johndoe'
         self._COMMON_USERNAME_PASSWORD = 'mypass'
-
+        
     def tearDown(self):
-        db.end_db(self.app)   
+        db.end_db(self.app)
+        
+    @classmethod
+    def tearDownClass(cls):
+        """
+        Remove the config file created in setUpClass
+        """
+        if os.path.exists(cls.dest_file):
+            os.remove(cls.dest_file)
     
     def test_expired_token(self):
+        """
+        Test to guarantee that an expired token does not authenticate the user
+        """
         auth_headers = {
-            "Authorization" : "Bearer {}".format(self._token)
+            "Authorization" : f"Bearer {self._token}"
         }
         body = {
             "username" : "lorem",
@@ -51,6 +71,9 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
         self.assertEqual(resp.status_code, Constants.HTTP_UNAUTHORIZED.value)
 
     def test_wrong_password_does_not_authenticate(self):
+        """
+        Test to guarantee that a wrong password does not authenticate the user
+        """
         username = self._admin_credentials["username"]
         password = "wrongpass"
         auth_pass = "{}:{}".format(username, password)
@@ -84,6 +107,9 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
                              json=body)
     
     def test_authorized_token_creates_user(self):
+        """
+        Test scenario to confirm that a user with admin privileges can create a new user
+        """
         response = self._create_fake_user()
         self.assertEqual(response.status_code, Constants.HTTP_CREATED.value)
         
@@ -98,13 +124,13 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
         }
         auth_pass = "{}:{}".format(normal_user["username"], normal_user["password"])
         auth = {
-            "Authorization" : "Basic {}".format(str(base64.b64encode(auth_pass.encode("utf-8")).decode("utf-8")))
+            "Authorization" : f"Basic {str(base64.b64encode(auth_pass.encode("utf-8")).decode("utf-8"))}"
         }
         response = self.client_app.get("/auth/login",
                               headers=auth,
                              ).get_json()
         token_auth = {
-            "Authorization" : "Bearer {}".format(response['token']['access'])
+            "Authorization" : f"Bearer {response['token']['access']}"
         }
         body = {
             "username" : self._COMMON_USERNAME + 'other',

@@ -108,5 +108,3 @@ class LogAggregator:
         db.initialize_db(app)
         jwt.initialize_manager(app)
         return app
-
-app = LogAggregator().app
