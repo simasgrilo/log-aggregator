@@ -1,6 +1,7 @@
 
 import tempfile
 import os
+from pathlib import Path
 from json import JSONEncoder
 from flask import Flask
 from LogAggregator import LogAggregator
@@ -13,7 +14,8 @@ class TestAppFactory:
     """ Test class for LogAggregator - creates a test app considering the same routes and attributes as the original app"""
 
     def __init__(self):
-        self.temp_db_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        directory = os.path.abspath(Path(__file__).parent)
+        self.temp_db_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False, dir=directory)
         self.path = f"sqlite:///{self.temp_db_file.name}"
         self.app = self.create_test_app()
         self.common_username = 'johndoe'
