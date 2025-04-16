@@ -9,11 +9,9 @@ import base64
 from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.abspath(Path(__file__).parent.parent.parent), "src"))
 sys.path.insert(0, os.path.join(os.path.abspath(Path(__file__).parent.parent.parent)))
-from LogAggregator import LogAggregator
+from test.test_app_factory import TestAppFactory
 from src.Utils import Constants
-from src.models import User
-from src.database import DB as db
-from json import JSONEncoder
+
 
 class Test_TestJWTAuthHandlers(unittest.TestCase):
     
@@ -22,28 +20,28 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
         cls.source_file = os.path.join(os.path.abspath(Path(__file__).parent.parent), "config.json")
         cls.dest_file = os.path.join(os.path.abspath(Path(__file__).parent.parent.parent), "config.json")
         shutil.copyfile(cls.source_file, cls.dest_file)
-        
+
     def setUp(self):
         """
         Creates an subset of the Flask application that loads only the part of the app to be tested.
         """
-        self.app = LogAggregator().create_test_app()
-        self.app.json_encoder = JSONEncoder
+        self.test_factory = TestAppFactory()
+        self.app = self.test_factory.get_test_app()
         self.app.config["JWT_SECRET_KEY"] = "iamnotasafekey"
         self.client_app = self.app.test_client()
         self._token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc0Mjc4NDQwNywianRpIjoiNDM0ZmY1ZDgtNTk3NS00YzkyLWEyMTctZjE3ZDExN2JjYTg4IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6ImFkbWluIiwibmJmIjoxNzQyNzg0NDA3LCJleHAiOjE3NDI3ODUzMDd9.gXuZp5PG-\_rtN8WKfghXmdh3MFqwbVPB8BY8Rj91ILE"
         self._invalid_token = "iaminvalidtoken"
         self._admin_credentials = {
-            "username": "admin",
-            "password": "changeme"
+                "username": "admin",
+                "password": "changeme"
         }
-        with self.app.app_context():
-            User.create_admin()
-        self._COMMON_USERNAME = 'johndoe'
-        self._COMMON_USERNAME_PASSWORD = 'mypass'
+        self._common_credentials = {
+            "username": "lorem",
+            "password": "ipsum"
+        }
         
     def tearDown(self):
-        db.end_db(self.app)
+        self.test_factory.destroy_test_app()
         
     @classmethod
     def tearDownClass(cls):
@@ -99,8 +97,8 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
             "Authorization" : "Bearer {}".format(response['token']['access'])
         }
         body = {
-            "username" : self._COMMON_USERNAME,
-            "password" : self._COMMON_USERNAME_PASSWORD
+            "username" : self._common_credentials["username"],
+            "password" : self._common_credentials["password"]
         }
         return self.client_app.post("/auth/register",
                              headers=token_auth,
@@ -119,8 +117,8 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
         """
         self._create_fake_user()
         normal_user = {
-            "username" : self._COMMON_USERNAME,
-            "password" : self._COMMON_USERNAME_PASSWORD
+            "username" : self._common_credentials["username"],
+            "password" : self._common_credentials["password"]
         }
         auth_pass = "{}:{}".format(normal_user["username"], normal_user["password"])
         auth = {
@@ -133,8 +131,8 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
             "Authorization" : f"Bearer {response['token']['access']}"
         }
         body = {
-            "username" : self._COMMON_USERNAME + 'other',
-            "password" : self._COMMON_USERNAME_PASSWORD + 'other'
+            "username" : self._common_credentials["username"] + 'other',
+            "password" : self._common_credentials["password"] + 'other'
         }
         response = self.client_app.post("/auth/register",
                              headers=token_auth,

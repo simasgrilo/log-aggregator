@@ -93,18 +93,3 @@ class LogAggregator:
                 return "Invalid authorization header. Please check your request header Authorization record", Constants.HTTP_BAD_REQUEST.value
         return log(self)
     
-    def create_test_app(self):
-        """
-        Creates an subset of the Flask application that loads only the part of the app to be tested.
-        """
-        app = Flask(__name__)
-        app.config.update({
-            "TESTING" : True,
-            "SQLALCHEMY_DATABASE_URI" : "sqlite:///:memory:"
-        })
-        app.add_url_rule("/", "online", self.online)
-        app.add_url_rule("/log", "log", self.log_service, methods=["POST"])
-        app.register_blueprint(auth_bp,url_prefix='/auth')
-        db.initialize_db(app)
-        jwt.initialize_manager(app)
-        return app

@@ -5,10 +5,8 @@ import os
 import sys
 import base64
 import shutil
-from json import JSONEncoder
 from pathlib import Path
-from LogAggregator import LogAggregator
-from src.models import User
+from test.test_app_factory import TestAppFactory
 
 
 sys.path.insert(0, os.path.join(os.path.abspath(Path(__file__).parent.parent.parent), "src"))
@@ -23,26 +21,14 @@ class test_log_message(unittest.TestCase):
         shutil.copyfile(cls.source_file, cls.dest_file)
     
     def setUp(self):
-        self.app = LogAggregator().create_test_app()
-        self.app.json_encoder = JSONEncoder
+        self.test_factory = TestAppFactory()
+        self.app = self.test_factory.get_test_app()
+        self.client_app = self.app.test_client()
         self._COMMON_USERNAME = 'johndoe'
         self._COMMON_USERNAME_PASSWORD = 'mypass'
-        with self.app.app_context():
-            self.new_user = User(
-                username=self._COMMON_USERNAME,
-            )
-            self.new_user.set_password(self._COMMON_USERNAME_PASSWORD)
-            self.new_user.save()
-        self.app.config["JWT_SECRET_KEY"] = "iamnotasafekey"
-        self.client_app = self.app.test_client()
         
-    @classmethod
-    def tearDownClass(cls):
-        """
-        Remove the config file created in setUpClass
-        """
-        if os.path.exists(cls.dest_file):
-            os.remove(cls.dest_file)
+    def tearDown(self):
+        self.test_factory.destroy_test_app()
         
     
     @patch("src.Logger.Logger.Logger.flush")
@@ -51,7 +37,8 @@ class test_log_message(unittest.TestCase):
         """
         Test that a single message can be received by the LogAggregator accordingly.
         """
-        auth_pass = f"{self._COMMON_USERNAME}:{self._COMMON_USERNAME_PASSWORD}"
+        username, password = self._COMMON_USERNAME, self._COMMON_USERNAME_PASSWORD
+        auth_pass = f"{username}:{password}"
         auth = {
             "Authorization" : f"Basic ${str(base64.b64encode(auth_pass.encode("utf-8")).decode("utf-8"))}"
         }
