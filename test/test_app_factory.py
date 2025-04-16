@@ -1,5 +1,4 @@
-
-from uuid import uuid4
+import tempfile
 import os
 from json import JSONEncoder
 from flask import Flask
@@ -13,8 +12,8 @@ class TestAppFactory:
     """ Test class for LogAggregator - creates a test app considering the same routes and attributes as the original app"""
 
     def __init__(self):
-        self.directory = f"/tmp/{uuid4().hex}.db"
-        self.path = f"sqlite:///{self.directory}"
+        self.tempfile = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
+        self.path = f"sqlite:///{self.tempfile.name}"
         self.app = self.create_test_app()
         self.common_username = 'johndoe'
         self.common_username_password = 'mypass'
@@ -60,8 +59,8 @@ class TestAppFactory:
         """
         db.end_db(self.app)
         try:
-            if os.path.exists(self.directory):
-                os.remove(self.directory)
+            if os.path.exists(self.tempfile.name):
+                os.remove(self.tempfile.name)
         except (FileNotFoundError, PermissionError) as e:
             print(e)
     

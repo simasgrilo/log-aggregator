@@ -11,8 +11,6 @@ jobs:
     test:
         runs-on: ubuntu-latest
         steps:
-            - name: Set up writable directory
-              run: mkdir -p /tmp
             - name: Checkout code
               uses: actions/checkout@v4
 
