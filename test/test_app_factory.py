@@ -1,5 +1,5 @@
 
-import tempfile
+from uuid import uuid4
 import os
 from pathlib import Path
 from json import JSONEncoder
@@ -14,9 +14,8 @@ class TestAppFactory:
     """ Test class for LogAggregator - creates a test app considering the same routes and attributes as the original app"""
 
     def __init__(self):
-        directory = os.path.abspath(Path(__file__).parent)
-        self.temp_db_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False, dir=directory)
-        self.path = f"sqlite:///{self.temp_db_file.name}"
+        self.directory = f"{os.path.abspath(Path(__file__).parent)}/{uuid4().hex}.db"
+        self.path = f"sqlite:///{self.directory}"
         self.app = self.create_test_app()
         self.common_username = 'johndoe'
         self.common_username_password = 'mypass'
@@ -61,10 +60,9 @@ class TestAppFactory:
         Closes all the resources required by the test app, namely the database resource, and deletes the temporary file.
         """
         db.end_db(self.app)
-        self.temp_db_file.close()
         try:
-            if os.path.exists(self.temp_db_file.name):
-                os.remove(self.temp_db_file.name)
-        except (FileNotFoundError, PermissionError):
-            pass
+            if os.path.exists(self.directory):
+                os.remove(self.directory)
+        except (FileNotFoundError, PermissionError) as e:
+            print(e)
     

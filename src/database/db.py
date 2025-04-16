@@ -42,3 +42,4 @@ class DB:
         db = DB.db_instance()
         with app.app_context():
             db.session.remove()
+            db.engine.dispose()
