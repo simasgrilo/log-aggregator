@@ -1,0 +1,26 @@
+{
+    "logs" : {
+        "path" : "static"
+    },
+
+    "elastic": {
+        "host" : "localhost",
+        "port" : 9200,
+        "auth" : { 
+            "username": "elastic",
+            "password": "<mypassword>"
+        },
+        "endpoints" : {
+            "doc": "_doc",
+            "create": "_create",
+            "indexQuery" : "/_cat/indices/{}",
+            "bulk": "{}/_bulk"
+        }
+    },
+
+    "S3" : {
+        "bucketName" : "<mybucket>",
+        "accessKeyId" : "<accessKeyId>",
+        "region" : "<region>"
+    }
+}
