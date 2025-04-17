@@ -41,5 +41,6 @@ class DB:
     def end_db(app):
         db = DB.db_instance()
         with app.app_context():
+            db.session.expunge_all()
             db.session.remove()
             db.engine.dispose()

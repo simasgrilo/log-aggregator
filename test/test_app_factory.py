@@ -4,16 +4,20 @@ from json import JSONEncoder
 from flask import Flask
 from LogAggregator import LogAggregator
 from src.auth import auth_bp, LogJWTManager as jwt
+from src.blueprints import LogBlueprint
 from src.database import DB as db
 from src.models import User
+from LogAggregator import LogAggregator
+import gc
 
 
 class TestAppFactory:
-    """ Test class for LogAggregator - creates a test app considering the same routes and attributes as the original app"""
+    """ Test class for LogAggregator - creates a test app considering the same routes and attributes as the original app
+        It creates the LogAggregator object but replacing some of the attributes with mock values.
+    """
 
     def __init__(self):
         self.tempfile = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
-        self.path = f"sqlite:///{self.tempfile.name}"
         self.app = self.create_test_app()
         self.common_username = 'johndoe'
         self.common_username_password = 'mypass'
@@ -24,7 +28,6 @@ class TestAppFactory:
             )
             self.new_user.set_password(self.common_username_password)
             self.new_user.save()
-        self.app.config["JWT_SECRET_KEY"] = "iamnotasafekey"
         
     def get_credentials(self):
         return (self.common_username, self.common_username_password)
@@ -33,31 +36,26 @@ class TestAppFactory:
         """
         Creates an subset of the Flask application that loads only the part of the app to be tested.
         """
-        app = Flask(__name__)
-        app.config.update({
+        test_config = {
             "TESTING" : True,
-            "SQLALCHEMY_DATABASE_URI" : self.path
-        })
-        #TODO decouple the url_rule from LogAggregator to a Blueprint file...
-        app.add_url_rule("/", "online", LogAggregator().online)
-        app.add_url_rule("/log", "log", LogAggregator().log_service, methods=["POST"])
-        app.register_blueprint(auth_bp,url_prefix='/auth')
-        app.json_encoder = JSONEncoder
-        db.initialize_db(app)
-        jwt.initialize_manager(app)
-        return app
+            "SQLALCHEMY_DATABASE_URI" : f"sqlite:///{self.tempfile.name}",
+            "JWT_SECRET_KEY" : "iamnotasafekey"
+        }
+        return LogAggregator(test_config=test_config).app
     
     def get_test_app(self):
         """
-        Returns the current app instance
+        Returns the current test factory instance. Required to be accessed in test scenarios.
         """
         return self.app
+    
     
     def destroy_test_app(self):
         """
         Closes all the resources required by the test app, namely the database resource, and deletes the temporary file.
         """
         db.end_db(self.app)
+        self.tempfile.close()
         try:
             if os.path.exists(self.tempfile.name):
                 os.remove(self.tempfile.name)

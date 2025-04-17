@@ -7,3 +7,4 @@ it's better not to push a real file (see file test_auth_handlers.py for more det
 from LogAggregator import LogAggregator
 
 app = LogAggregator().app
+app.run()
