@@ -1,0 +1,35 @@
+# Main workflow for CI/CD pipeline upon hitting main branch. This workflow will test the code and then build the container image if everything is OK.
+on:
+    push:
+        branches:
+            - develop
+    pull_request:
+        branches:
+            - develop
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Python 3.13.2
+              uses: actions/setup-python@v5
+              with:
+                  python-version: '3.13'
+
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -r requirements.txt
+
+            - name: Run tests
+              run: |
+                   python -m unittest discover -v -s test -p "*.py" > result.log
+                   if grep -q "FAILED" result.log; then
+                    echo "Tests failed!"
+                    exit 1
+                   else
+                    echo "All tests passed!"
+                   fi 
