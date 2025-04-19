@@ -1,4 +1,3 @@
-import base64
 from flask import Blueprint
 from src.services.auth_service import AuthService
 

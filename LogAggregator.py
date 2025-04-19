@@ -17,6 +17,7 @@ from src.ConfigManager.ConfigManager import ConfigManager
 from src.FileTransferManager.ElasticConnector import ElasticConnector
 from src.blueprints import LogBlueprint
 from src.blueprints.docs import LogDoc
+from src.blueprints.docs.auth_doc import api as auth_namespace
 
 
 class LogAggregator:
@@ -54,10 +55,27 @@ class LogAggregator:
             # register the blueprints for authentication: every authentication related resource needs to be prefixed with /auth
             self.app.register_blueprint(auth_bp,url_prefix='/auth')
             #Swagger UI setup with RESTX API:
-            restx_api = Api(app=self.app, version="1.0", title="LogAggregator API", description="LogAggregator API documentation", doc="/docs")
+            authentication = {
+                'basic': {
+                    'type': 'basic',
+                    'scheme': 'basic',
+                    'in': 'header'},
+                'jwt' : {
+                    'type': "oauth2",
+                    'scheme': 'bearer',
+                    'in': "header"
+                }
+            }
+            restx_api = Api(app=self.app, 
+                            version="1.0", 
+                            title="LogAggregator API", 
+                            description="LogAggregator API documentation", 
+                            doc="/docs",
+                            authorizations=authentication)
             LogDoc(self.__log)
             log_namespace = LogDoc.get_api()
             restx_api.add_namespace(log_namespace, path="/log")
+            restx_api.add_namespace(auth_namespace, path="/auth")
             
         except FileNotFoundError as exc:
             message = inspect.cleandoc("""Missing config.json file. Please provide a valid file when starting the app. 
