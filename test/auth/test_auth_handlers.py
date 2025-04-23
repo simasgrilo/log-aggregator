@@ -74,25 +74,20 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
         """
         username = self._admin_credentials["username"]
         password = "wrongpass"
-        auth_pass = "{}:{}".format(username, password)
+        response = self._login(username, password)
+        self.assertEqual(response.status_code, Constants.HTTP_BAD_REQUEST.value)
+        
+    def _login(self, username: str, password: str):
+        auth_pass = f"{username}:{password}"
         auth = {
-            "Authorization" : "Basic {}".format(base64.b64encode(auth_pass.encode("utf-8")))
+            "Authorization" : "Basic {}".format(str(base64.b64encode(auth_pass.encode("utf-8")).decode("utf-8")))
         }
-        response = self.client_app.get("/auth/login",
-                              headers=auth,
-                             )
-        self.assertEqual(response.status_code, Constants.HTTP_UNAUTHORIZED.value)
+        return self.client_app.get("/auth/login",headers=auth)
     
     def _create_fake_user(self):
         username = self._admin_credentials["username"]
         password = self._admin_credentials["password"]
-        auth_pass = "{}:{}".format(username, password)
-        auth = {
-            "Authorization" : "Basic {}".format(str(base64.b64encode(auth_pass.encode("utf-8")).decode("utf-8")))
-        }
-        response = self.client_app.get("/auth/login",
-                              headers=auth,
-                             ).get_json()
+        response = self._login(username, password).get_json()
         token_auth = {
             "Authorization" : "Bearer {}".format(response['token']['access'])
         }
@@ -120,13 +115,7 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
             "username" : self._common_credentials["username"],
             "password" : self._common_credentials["password"]
         }
-        auth_pass = "{}:{}".format(normal_user["username"], normal_user["password"])
-        auth = {
-            "Authorization" : f"Basic {str(base64.b64encode(auth_pass.encode("utf-8")).decode("utf-8"))}"
-        }
-        response = self.client_app.get("/auth/login",
-                              headers=auth,
-                             ).get_json()
+        response = self._login(normal_user["username"], normal_user["password"]).get_json()
         token_auth = {
             "Authorization" : f"Bearer {response['token']['access']}"
         }
@@ -138,3 +127,53 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
                              headers=token_auth,
                              json=body)
         self.assertEqual(response.status_code, Constants.HTTP_UNAUTHORIZED.value)
+        
+    #ERICK - tests for password change request
+    def test_change_password(self):
+        response = self._create_fake_user()
+        username = self._admin_credentials["username"]
+        password = self._admin_credentials["password"]
+        new_password = "newpassword"
+        response = self._login(username, password).get_json()
+        token_auth = {
+            "Authorization": f"Bearer {response['token']['access']}"
+        }
+        password_response = self.client_app.post("/auth/changePassword", 
+                                                 headers=token_auth,
+                                                 json={
+                                                     "username" : username,
+                                                     "password": new_password
+                                                 })
+        self.assertEqual(password_response.status_code, Constants.HTTP_OK.value)
+        login_new_pass = self._login(username, new_password)
+        self.assertEqual(login_new_pass.status_code, Constants.HTTP_OK.value)
+        
+    def test_delete_user(self):
+        """
+        Test scenario: user with admin privileges deletes a user. the user to be deleted is OK before deletion, and after deletion the login request should sreturn 400.
+        1) create the fake user (which will be deleted)
+        2) login with the created user needs to be OK
+        3) login with admin user needs to be OK
+        4) call the delete user endpoint with the admin credentials for the created user in step 1 must be successful
+        5) deleted user can no longer login with the same credentials
+        """
+        response = self._create_fake_user()
+        common_username = self._common_credentials["username"]
+        common_password = self._common_credentials["password"]
+        logon_response = self._login(common_username, common_password)
+        self.assertEqual(logon_response.status_code, Constants.HTTP_OK.value)
+        admin_username = self._admin_credentials["username"]
+        admim_password = self._admin_credentials["password"]
+        response = self._login(admin_username, admim_password).get_json()
+        token_auth = {
+            "Authorization": f"Bearer {response['token']['access']}"
+        }
+        delete_response = self.client_app.delete("/auth/deleteUser", 
+                                                 headers=token_auth,
+                                                 json={
+                                                     "username" : self._common_credentials["username"],
+                                                     "password": self._common_credentials["password"]
+                                                 })
+        self.assertEqual(delete_response.status_code, Constants.HTTP_OK.value)
+        login_del_user = self._login(self._common_credentials["username"], self._common_credentials["password"])
+        self.assertEqual(login_del_user.status_code, Constants.HTTP_BAD_REQUEST.value)

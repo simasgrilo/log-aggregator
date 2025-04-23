@@ -1,10 +1,10 @@
+import base64
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt
 from src.models import User
 from .PayloadValidator import PayloadValidator
 from .Constants import Constants as AuthConstants
 from src.Utils import Constants
-import base64
 
 auth_bp = Blueprint("Auth",__name__)
 
@@ -79,4 +79,64 @@ def _add_additional_claims(username: str):
     }
     if username == 'admin':
         additional_claims["perm"].append("create_user")
-    return create_access_token(identity=username, additional_claims=additional_claims)   
+    return create_access_token(identity=username, additional_claims=additional_claims)
+
+@auth_bp.post("/changePassword")
+@jwt_required()
+def change_password():
+    """
+    Endpoint to allow chaning the password of an user. Only users with admin privileges can perform this acction
+    Args:
+    """
+    try:
+        data = request.json
+        claims = get_jwt()
+        if claims["sub"] != data["username"]:
+            return jsonify({
+                "message": "Invalid token for the provided username."
+            }), Constants.HTTP_UNAUTHORIZED.value
+        user = _get_user()
+        user.set_password(data['password'])
+        user.save()
+        return jsonify({
+            "message": f'Password changed for user {user.username}'
+        }), Constants.HTTP_OK.value
+    except KeyError as e:
+        return jsonify({
+            "message": str(e)
+        }), Constants.HTTP_BAD_REQUEST.value
+    except ValueError:
+        return jsonify({
+            "message": AuthConstants.MISSING_AUTH.value
+        }), Constants.HTTP_UNAUTHORIZED.value
+        
+@auth_bp.delete("/deleteUser")
+@jwt_required()
+def delete_user():
+    """
+    Endpoint to allow deletion of an user. Only users with admin rights can access this resource.
+    """
+    try:
+        user = _get_user()
+        claims = get_jwt()
+        if AuthConstants.CLAIM_CREATE_USER.value not in claims["perm"]:
+            return jsonify({
+                "message": AuthConstants.MISSING_AUTH.value
+            }), Constants.HTTP_UNAUTHORIZED.value
+        user.delete()
+        return jsonify({
+            "message": "User deleted"
+        }), Constants.HTTP_OK.value
+    except KeyError as e:
+        return jsonify({
+            "message": str(e)
+        }), Constants.HTTP_BAD_REQUEST.value
+
+def _get_user():
+    """Retrieves the user that will have their password changed"""
+    data = request.json
+    PayloadValidator.validate_payload(data)
+    user = User.by_id(data['username'])
+    if not user:
+        raise KeyError("User not found")
+    return user
