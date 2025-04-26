@@ -88,4 +88,65 @@ class AuthService:
         }
         if username == 'admin':
             additional_claims["perm"].append("create_user")
-        return create_access_token(identity=username, additional_claims=additional_claims)   
+        return create_access_token(identity=username, additional_claims=additional_claims)
+    
+    @staticmethod
+    @jwt_required()
+    def change_password():
+        """
+        Endpoint to allow chaning the password of an user. Only users with admin privileges can perform this acction
+        Args:
+        """
+        try:
+            data = request.json
+            claims = get_jwt()
+            if claims["sub"] != data["username"]:
+                return jsonify({
+                    "message": "Invalid token for the provided username."
+                }), Constants.HTTP_UNAUTHORIZED.value
+            user = AuthService.get_user()
+            user.set_password(data['password'])
+            user.save()
+            return jsonify({
+                "message": f'Password changed for user {user.username}'
+            }), Constants.HTTP_OK.value
+        except KeyError as e:
+            return jsonify({
+                "message": str(e)
+            }), Constants.HTTP_BAD_REQUEST.value
+        except ValueError:
+            return jsonify({
+                "message": AuthConstants.MISSING_AUTH.value
+            }), Constants.HTTP_UNAUTHORIZED.value
+    
+    @staticmethod
+    @jwt_required()
+    def delete_user():
+        """
+        Endpoint to allow deletion of an user. Only users with admin rights can access this resource.
+        """
+        try:
+            user = AuthService.get_user()
+            claims = get_jwt()
+            if AuthConstants.CLAIM_CREATE_USER.value not in claims["perm"]:
+                return jsonify({
+                    "message": AuthConstants.MISSING_AUTH.value
+                }), Constants.HTTP_UNAUTHORIZED.value
+            user.delete()
+            return jsonify({
+                "message": "User deleted"
+            }), Constants.HTTP_OK.value
+        except KeyError as e:
+            return jsonify({
+                "message": str(e)
+            }), Constants.HTTP_BAD_REQUEST.value
+
+    @staticmethod
+    def get_user():
+        """Retrieves the user that will have their password changed"""
+        data = request.json
+        PayloadValidator.validate_payload(data)
+        user = User.by_id(data['username'])
+        if not user:
+            raise KeyError("User not found")
+        return user

@@ -138,7 +138,7 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
         token_auth = {
             "Authorization": f"Bearer {response['token']['access']}"
         }
-        password_response = self.client_app.post("/auth/changePassword", 
+        password_response = self.client_app.post("/auth/user/password", 
                                                  headers=token_auth,
                                                  json={
                                                      "username" : username,
@@ -168,7 +168,7 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
         token_auth = {
             "Authorization": f"Bearer {response['token']['access']}"
         }
-        delete_response = self.client_app.delete("/auth/deleteUser", 
+        delete_response = self.client_app.delete("/auth/user", 
                                                  headers=token_auth,
                                                  json={
                                                      "username" : self._common_credentials["username"],
