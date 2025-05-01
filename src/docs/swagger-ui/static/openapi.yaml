@@ -126,6 +126,30 @@ paths:
                 type: object
                 example: { "message": Missing authorization for requested resource }
 
+  /auth/user/password:
+    put:
+      tags: 
+        - User
+      description: Updates a user's password. Only the user can change its own password
+      security:
+        - bearerHttpAuthentication: []
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref : '#/components/schemas/User'
+      responses:
+        '200':
+          description: 'User deleted successfully'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: {"message" : "Password changed for user <username>"}
+
   /log:
     post:
       tags:

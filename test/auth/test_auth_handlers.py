@@ -138,7 +138,7 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
         token_auth = {
             "Authorization": f"Bearer {response['token']['access']}"
         }
-        password_response = self.client_app.post("/auth/user/password", 
+        password_response = self.client_app.put("/auth/user/password", 
                                                  headers=token_auth,
                                                  json={
                                                      "username" : username,
@@ -147,6 +147,29 @@ class Test_TestJWTAuthHandlers(unittest.TestCase):
         self.assertEqual(password_response.status_code, Constants.HTTP_OK.value)
         login_new_pass = self._login(username, new_password)
         self.assertEqual(login_new_pass.status_code, Constants.HTTP_OK.value)
+        
+    def test_another_user_tries_to_change_pass(self):
+        """
+        Test to ensure that a JWT identifying an user cannot change the password of a different user
+        """
+        response = self._create_fake_user()
+        username = self._admin_credentials["username"]
+        password = self._admin_credentials["password"]
+        new_username = response.json["username"]
+        new_password = "newpassword"
+        response = self._login(username, password).get_json()
+        token_auth = {
+            "Authorization": f"Bearer {response['token']['access']}"
+        }
+        password_response = self.client_app.put("/auth/user/password", 
+                                                 headers=token_auth,
+                                                 json={
+                                                     "username" : new_username,
+                                                     "password": new_password
+                                                 })
+        self.assertEqual(password_response.status_code, Constants.HTTP_UNAUTHORIZED.value)
+        
+    
         
     def test_delete_user(self):
         """
