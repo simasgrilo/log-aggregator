@@ -1,0 +1,188 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: LogAggregator API
+  description: A microservices based approach for log parsing, indexing and analysis.
+security:
+  - bearerHttpAuthentication : []
+
+paths:
+  /auth/login:
+    get:
+      tags:
+        - User
+      description: Logs the user in the system
+      security:
+        - basicHttpAuthentication: []
+
+      responses:
+        '200':
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  token:
+                    type: object
+                    properties:
+                      access: 
+                        type: string
+                      refresh:
+                        type: string
+                example: { "message": "Logged in", "token": { "access": "a valid access token", "refresh": "Its corresponding token" } }
+        '400':
+          description: "Bad request - invalid username or password"
+          content:
+            application/json:
+              schema:
+                type: string
+  /auth/register:
+    post:
+      tags:
+        - User
+      description: Registers a new user in the system. Requires admin access.
+      security:
+        - bearerHttpAuthentication: []
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/User'
+
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example: { "message": "user created", "username": "wilsonphilips" }
+        '400':
+          description: "Bad request - Invalid parameters in request body"
+          content:
+            application/json:
+              schema:
+                type: object
+                example: { "message": Illegal argument in your request. }
+        '401':
+          description: "Unauthorized - Current user does not have the necessary permissions to create a new user"
+          content:
+            application/json:
+              schema:
+                type: string
+                example: { "message": "missing authorization for requested resource" }
+        '409':
+          description: Conflict - User already exists
+          content:
+            application/json:
+              schema:
+                type: string
+                example: { "message": "User already exists"}
+  /auth/user:
+    delete:
+      tags: 
+        - User
+      description: Deletes a user from the system. requires admin access
+      security:
+        - bearerHttpAuthentication: []
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              type: object
+              properties:
+                username:
+                  type: string
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example: { "message": "user deleted"}
+        '400':
+          description: "Bad request"
+          content:
+            application/json:
+              schema:
+                type: object
+                example: { "message": Illegal argument in your request. }
+                  
+        '401':
+          description: "Unauthorized - missing authorization for requested resource"
+          content:
+            application/json:
+              schema:
+                type: object
+                example: { "message": Missing authorization for requested resource }
+
+  /log:
+    post:
+      tags:
+        - log
+      security:
+        - bearerHttpAuthentication: []
+      requestBody:
+        description: The logged message is expected to be of type as text/plain
+        content:
+          text/plain:
+            schema:
+              type: string
+              $ref: '#/components/schemas/Log'
+      responses:
+        '200':
+          description: "Log received from <ip_addr> - <ip_addr> is the request's IP address of the application that has sent the message to the LogAggregator"
+          content:
+            application/json:
+              schema:
+                type: object
+                example: {"message" : Log received from 127.0.0.1}
+        '400':
+          description: "Bad request - check your input"
+          content:
+            application/json:
+              schema:
+                type: object
+                example: {"message" : Error upon parsing input payload. Please refer to the documentation to get the correct expected format}
+        '401':
+          description: "Unauthorized - missing authorization for requested resource"
+
+
+components:  
+  securitySchemes:
+    basicHttpAuthentication:
+      description: Basic HTTP Authentication
+      type: http
+      scheme: Basic
+    bearerHttpAuthentication:
+      description: Bearer token using a JWT
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: Username to be created
+        password:
+          type: string
+          description: Password of the user 
+    Log:
+      type: string
+      format: date - time - IP (ipv4 or ipv6) - Process ID - Level - method - module - message
+      example: 2025-04-18 01:58:39,762 - 127.0.0.1 - 1223 - INFO - get_dns - server.py - Querying DNS server for address www.gmail.com

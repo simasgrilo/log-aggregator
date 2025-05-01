@@ -8,7 +8,6 @@ import json
 from pathlib import Path
 from dotenv import load_dotenv
 from flask import Flask
-from flask_restx import Api
 from src.Logger.Logger import Logger
 from src.database import DB as db
 from src.auth import auth_bp, LogJWTManager as jwt
@@ -16,8 +15,9 @@ from src.FileTransferManager.FileUploader import FileUploader
 from src.ConfigManager.ConfigManager import ConfigManager
 from src.FileTransferManager.ElasticConnector import ElasticConnector
 from src.blueprints import LogBlueprint
-from src.blueprints.docs import LogDoc
-from src.blueprints.docs.auth_doc import api as auth_namespace
+from src.docs.py.docs import doc_app
+#from src.blueprints.docs import LogDoc
+#from src.blueprints.docs.auth_doc import api as auth_namespace
 
 
 class LogAggregator:
@@ -54,29 +54,8 @@ class LogAggregator:
             self.app.register_blueprint(log_bp,url_prefix='/')
             # register the blueprints for authentication: every authentication related resource needs to be prefixed with /auth
             self.app.register_blueprint(auth_bp,url_prefix='/auth')
-            #Swagger UI setup with RESTX API:
-            authentication = {
-                'basic': {
-                    'type': 'basic',
-                    'scheme': 'basic',
-                    'in': 'header'},
-                'jwt' : {
-                    'type': "oauth2",
-                    'scheme': 'bearer',
-                    'in': "header"
-                }
-            }
-            restx_api = Api(app=self.app, 
-                            version="1.0", 
-                            title="LogAggregator API", 
-                            description="LogAggregator API documentation", 
-                            doc="/docs",
-                            authorizations=authentication)
-            LogDoc(self.__log)
-            log_namespace = LogDoc.get_api()
-            restx_api.add_namespace(log_namespace, path="/log")
-            restx_api.add_namespace(auth_namespace, path="/auth")
-            
+            # Swagger UI implementation in a separate blueprint
+            self.app.register_blueprint(doc_app, url_prefix='/api')
         except FileNotFoundError as exc:
             message = inspect.cleandoc("""Missing config.json file. Please provide a valid file when starting the app. 
                      If this app was started using Docker, please ensure that your Docker run has a -v volume binding that maps the config.json file 

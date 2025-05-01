@@ -33,15 +33,15 @@ class AuthService:
             data = request.json
             PayloadValidator.validate_payload(data)
             user = User.by_id(data['username'])
-        except ValueError:
+        except (ValueError, KeyError):
             #maybe protecting this against XSS/SQL injection attacks is a good thing...
             return jsonify({
                 "message": "Illegal argument in your request. Please check your input"
-            }), Constants.HTTP_CONFLICT.value
+            }), Constants.HTTP_BAD_REQUEST.value
         if user:
             return jsonify({
                 "message" : "User already exists"
-            }), Constants.HTTP_BAD_REQUEST.value
+            }), Constants.HTTP_CONFLICT.value
         new_user = User(
             username=data['username']
         )
@@ -72,7 +72,7 @@ class AuthService:
                     "refresh": refresh_token
                 }
             }), Constants.HTTP_OK.value
-        except KeyError:
+        except (KeyError, AttributeError):
             return jsonify({
                 "error": "one or more required fields were not provided. Check your input payload"
             }), Constants.HTTP_BAD_REQUEST.value

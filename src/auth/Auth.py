@@ -21,7 +21,7 @@ def login():
 
     return AuthService.login()
 
-@auth_bp.post("/user/password")
+@auth_bp.put("/user/password")
 def change_password():
     """
     Endpoint to allow chaning the password of an user. Only users with admin privileges can perform this acction
