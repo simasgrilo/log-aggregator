@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: log-aggregator-config
+  labels:
+    app: aggregator
+data:
+  config.json : |
+    {
+      "logs" : {
+          "path" : "static"
+      },
+
+      "elastic": {
+          "host" : "es-es-http",
+          "port" : 9200,
+          "auth" : { 
+              "username": "elastic",
+              "password": "<password>"
+          },
+          "endpoints" : {
+              "doc": "_doc",
+              "create": "_create",
+              "indexQuery" : "/_cat/indices/{}",
+              "bulk": "{}/_bulk"
+          }
+      },
+
+      "S3" : {
+          "bucketName" : "<bucket-name>",
+          "region" : "<region>"
+      }
+    }

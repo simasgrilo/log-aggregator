@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-aggregator
+  namespace: default
+  labels: 
+    app: log-aggregator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-aggregator
+  template:
+    metadata:
+      labels:
+        app: log-aggregator
+    spec:
+      containers:
+      - name: log-aggregator-container
+        image: simasgrilo/log-aggregator:latest
+        imagePullPolicy: Always
+        volumeMounts:
+          - name:  config-volume
+            mountPath: '/app/config.json'
+            subPath: config.json
+            readOnly: true
+        ports:
+        - containerPort: 5000
+        env:
+          - name:  AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name:  aws-credentials
+                key:  aws_access_key_id
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name:  aws-credentials
+                key:  aws_secret_access_key
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: "1"
+          requests:
+            memory: 256Mi
+            cpu: "0.2"
+      volumes:
+        - name: config-volume
+          configMap:  
+            name: log-aggregator-config #name of the config map create also in kubectl.
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name:  log-aggregator-service
+spec:
+  selector:
+    app:  log-aggregator
+  type: NodePort
+  ports:
+  - protocol: TCP
+    port:  3001
+    targetPort:  5000
+    nodePort: 30001

@@ -1,0 +1,10 @@
+.git
+.vscode
+__pycache__
+node_modules
+keys.txt
+notas.odt
+AWS config.odt
+class_diagram.drawio
+docs/*
+config.json
