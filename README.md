@@ -2,7 +2,7 @@
 
 A micro-services based approach to collect logs from different soruces, process them and store them in a cloud-based solution to allow analysis. This app collects logs from different sources, parses them and then sends it to a Elasticsearch-Kibana stack for indexing and analysis
 
-LogAggregator can be seen as a (very) specific subset of [Logstash](https://www.elastic.co/logstash), a data pipeline that collects, process and sends the log to a specific "stash", which is usually the log collector when using the ELK stash (Elasticsearch-Logstash-Kibana) for log analysis. In this sense, the design of LogAggregator allows any service with a local log solution to forward its logging data to LogAggregator and then 
+LogAggregator can be seen as a (very) specific subset of [Logstash](https://www.elastic.co/logstash), a data pipeline that collects, process and sends the log to a specific "stash", which is usually the log collector when using the ELK stash (Elasticsearch-Logstash-Kibana) for log analysis. In this sense, the design of LogAggregator allows any service with a local log solution to forward its logging data to LogAggregator and then enabling analysis in a central service. 
 
 It is built upon a Flask application with JWT authentication for log posting. Services that will be monitored by this solution need to register and get a valid user, which can be done by requesting to the admin of the service. Only the admin has access to create new users.
 
@@ -24,7 +24,7 @@ Amazon S3 for log storage
 
 The following diagram describes the current architecture of the solution, broken down in the key components used within the LogAggregator solution:
 
-![](.\docs\architecture.PNG)
+![](docs/architecture.PNG)
 
 Mainly, the objective of LogAggregator is to consolidate, parse and send the logs for storage in S3 and for indexing in Elasticsearch. Lastly, Kibana is directly plugged into Elasticsearch which allows us to use all the tooling that Kibana provides for index patterns, analysis, alerts, etc, all based on the data that the LogAggregator pushes.
 
@@ -36,7 +36,7 @@ Mainly, the objective of LogAggregator is to consolidate, parse and send the log
 - [X] Log collection from services that needs to log just need to send the service to the logging service (given that the service is authorized) in a standardized manner
 - Authentication and Authorization using JWT for logging measures
 - [X] User creation and administration by admin
-- [ ] Serverless (deployed in cloud, both the service and the logs). Not yet in productive cloud but one can set in a EKS following the sequence of .yaml files
+- [X] Serverless (deployed in cloud, both the service and the logs)
 - [X] Visualization of the logs using Kibana, including alert setup
 - [X] Kubernetes-ready solution
 
